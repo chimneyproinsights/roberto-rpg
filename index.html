@@ -1,343 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Roberto Fantasy — Minimal Zelda-like (Boot Test)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Roberto Fantasy — Modern 2D (HD Procedural)</title>
 <style>
-  html,body{margin:0;padding:0;background:#0b0c10;color:#eaeaea;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  #game{display:flex;justify-content:center;align-items:center;height:100vh;touch-action:manipulation}
-  .hud{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);padding:8px 10px;border-radius:10px;font-size:14px}
-  .gp{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);padding:8px 10px;border-radius:10px;font-size:12px}
-  .panel{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(8,8,10,.82);padding:12px 14px;border-radius:10px;min-width:300px;max-width:90vw;text-align:center}
-  .btnbar{margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-  button{background:#1e88e5;border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-  .heart{display:inline-block;width:14px;height:14px;background:#e53935;clip-path:polygon(50% 8%,61% 0,75% 2%,86% 11%,88% 24%,82% 36%,50% 66%,18% 36%,12% 24%,14% 11%,25% 2%,39% 0);margin-right:3px}
-  .heart.empty{background:#4a1919}
-  .corner{position:absolute;bottom:8px;right:10px;opacity:.65;font-size:12px}
+:root{--ui:#e8eef7}
+html,body{height:100%;margin:0;background:#14161a;color:var(--ui);font:600 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+#wrap{height:100%;display:flex;flex-direction:column}
+#hud{position:fixed;left:16px;top:12px;background:rgba(10,12,15,.6);backdrop-filter:blur(6px);
+padding:10px 14px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+#hud b{color:#9ad1ff}
+#game{flex:1;display:flex;align-items:center;justify-content:center}
+canvas{width:min(1100px,100vw);height:min(700px,100vh);image-rendering:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+.hint{position:fixed;right:14px;bottom:10px;opacity:.8}
 </style>
 </head>
 <body>
-  <div id="game"></div>
-  <div class="hud">
-    <div><strong>Roberto Fantasy — Minimal Boot</strong></div>
-    <div>Move: WASD/Arrows • Attack: J • Block: K • Dash: L • Interact: E • Menu: P</div>
-    <div id="hearts"></div><div id="stats"></div>
-  </div>
-  <div class="gp" id="gp">Gamepad: <strong>None</strong></div>
-  <div class="panel" id="panel" style="display:none;">
-    <h3 id="panelTitle"></h3><div id="panelText"></div><div class="btnbar" id="panelBtns"></div>
-  </div>
-  <div class="corner">v1.0 (Canvas, iOS-friendly)</div>
+<div id="wrap">
+<div id="hud">Roberto Fantasy — <b>Modern 2D</b> • Move: WASD/Arrows • Dash: Shift • Attack: K • Menu: P</div>
+<div id="game"><canvas id="cv" width="1280" height="720"></canvas></div>
+<div class="hint">© You • No external art — procedural HD</div>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.js"></script>
 <script>
-/* ===== Utility ===== */
-function rand(min,max){return Math.floor(min+Math.random()*(max-min+1));}
+/* ========= Core setup ========= */
+const cv = document.getElementById('cv'), cx = cv.getContext('2d',{alpha:false});
+const DPR = Math.min(2, window.devicePixelRatio || 1);
+cv.width = Math.round(cv.width * DPR); cv.height = Math.round(cv.height * DPR);
 
-/* ===== Items/Progress ===== */
-const TIERS=[{n:'Bronze',m:1},{n:'Iron',m:1.15},{n:'Steel',m:1.32},{n:'Mithril',m:1.52},{n:'Obsidian',m:1.75},{n:'Dragonbone',m:2.02},{n:'Gold',m:2.35}];
-function gearStats(lvl){const t=TIERS[Math.max(0,Math.min(6,lvl-1))];return{
-  sword:{name:t.n+' Blade', atk:Math.round(5*t.m+(lvl-1)*2)},
-  shield:{name:t.n+' Shield', def:Math.round(2.5*t.m+(lvl-1)*1.3)},
-  armor:{name:t.n+' Armor', atkB:Math.round(1*t.m+(lvl-1)*0.5), defB:Math.round(2*t.m+(lvl-1)*1.1)},
-};}
-class Equipment{
-  constructor(){this.sword=1;this.shield=1;this.armor=1;this.shards=0;this.keys=0;this.chapter=0;}
-  atk(){const s=gearStats(this.sword).sword.atk, a=gearStats(this.armor).armor.atkB; return s+a;}
-  def(){const h=gearStats(this.shield).shield.def, a=gearStats(this.armor).armor.defB; return h+a;}
-  cost(part){return 10*(this[part]+1)}
-  canUp(part){return this[part]<7}
-  up(part){if(!this.canUp(part))return false;const c=this.cost(part);if(this.shards<c)return false;this.shards-=c;this[part]++;save();return true;}
-  names(){return{
-    sword:gearStats(this.sword).sword.name,
-    shield:gearStats(this.shield).shield.name,
-    armor:gearStats(this.armor).armor.name
-  }}
+/* ========= Helpers ========= */
+const rand = (a=1,b=0)=>Math.random()*(a-b)+b;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+/* Small value noise (fast, no deps) */
+function makeNoise(size=256){
+const p = new Float32Array(size*size);
+for(let i=0;i<p.length;i++) p[i]=Math.random();
+const v=(x,y)=>p[((x&255)<<8)|(y&255)];
+return (x,y,oct=4)=>{ // fractal brownian
+let amp=1, freq=1, sum=0, norm=0;
+for(let i=0;i<oct;i++){
+const xi = Math.floor(x*freq), yi=Math.floor(y*freq);
+const xf = x*freq-xi, yf=y*freq-yi;
+// bilinear
+const a=v(xi,yi), b=v(xi+1,yi), c=v(xi,yi+1), d=v(xi+1,yi+1);
+const u = xf*xf*(3-2*xf), w = yf*yf*(3-2*yf);
+const n = lerp(lerp(a,b,u), lerp(c,d,u), w);
+sum += n*amp; norm+=amp; amp*=.5; freq*=2;
 }
-const EQUIP=new Equipment();
-let SAVE={hearts:6,maxHearts:6,stamina:100,maxStamina:100,map:'overworld',spawn:{x:200,y:300}};
-function save(){localStorage.setItem('rf_min',JSON.stringify({equip:EQUIP,save:SAVE}));}
-(function load(){try{const raw=localStorage.getItem('rf_min');if(raw){const d=JSON.parse(raw);Object.assign(EQUIP,d.equip||{});Object.assign(SAVE,d.save||SAVE)}}catch(e){}})();
+return sum/norm;
+};
+}
+const noise = makeNoise();
 
-/* ===== Gamepad ===== */
-const GP={connected:false,name:'None',axes:[0,0],buttons:[],update(){const pads=navigator.getGamepads?navigator.getGamepads():[];const gp=[...pads].find(p=>p);if(!gp){this.connected=false;this.name='None';return;}this.connected=true;this.name=gp.id||'Gamepad';this.axes=gp.axes;this.buttons=gp.buttons.map(b=>b.pressed);}};
-addEventListener('gamepadconnected',e=>{GP.connected=true;GP.name=e.gamepad.id;document.getElementById('gp').innerHTML='Gamepad: <strong>'+GP.name+'</strong>';});
-addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.name='None';document.getElementById('gp').innerHTML='Gamepad: <strong>None</strong>';});
+/* ========= World (tile map) ========= */
+const T = 48; // tile size (px in world units)
+const MAP_W = 120, MAP_H = 120; // large world
+const map = new Uint8Array(MAP_W*MAP_H);
+// 0 = grass, 1 = path, 2 = water, 3 = tree
 
-/* ===== Quick Canvas Textures ===== */
-function makeTex(scene,key,w,h,paint){const t=scene.textures.createCanvas(key,w,h);const c=t.getContext();paint(c,w,h);t.refresh();}
-function dots(c,n,colors){for(let i=0;i<n;i++){c.fillStyle=colors[i%colors.length];c.fillRect((Math.random()*32)|0,(Math.random()*32)|0,1,1);}}
-// Tiles: 0 grass,1 path,2 water,3 tree,4 portal,5 wall,6 floor,7 door
-function tileKey(id){return id===0?'grass':id===1?'path':id===2?'water':id===3?'tree':id===4?'portal':id===5?'wall':id===6?'floor':id===7?'door':'grass'}
-function solid(id){return (id===2||id===3||id===5||id===7)}
+function at(x,y){ return map[y*MAP_W+x]; }
+function set(x,y,v){ map[y*MAP_W+x]=v; }
 
-/* ===== Boot Scene ===== */
-class Boot extends Phaser.Scene{
-  constructor(){super('Boot');}
-  preload(){
-    makeTex(this,'pl',28,28,(c,w,h)=>{c.fillStyle='#1e88e5';c.fillRect(0,0,w,h);c.fillStyle='#0d47a1';c.fillRect(2,2,w-4,h-4);});
-    makeTex(this,'slime',26,22,(c,w,h)=>{c.fillStyle='#8bc34a';c.fillRect(0,2,w,h-2);});
-    makeTex(this,'boss',46,46,(c,w,h)=>{c.fillStyle='#ffd54a';c.fillRect(0,0,w,h);c.fillStyle='#b28900';c.fillRect(3,3,w-6,h-6);});
-    makeTex(this,'grass',32,32,(c,w,h)=>{c.fillStyle='#2e7d32';c.fillRect(0,0,w,h);dots(c,60,['#388e3c','#1b5e20']);});
-    makeTex(this,'path',32,32,(c,w,h)=>{c.fillStyle='#8d6e63';c.fillRect(0,0,w,h);dots(c,50,['#6d4c41','#a1887f']);});
-    makeTex(this,'water',32,32,(c,w,h)=>{c.fillStyle='#1565c0';c.fillRect(0,0,w,h);dots(c,70,['#42a5f5','#0d47a1']);});
-    makeTex(this,'tree',32,40,(c,w,h)=>{c.fillStyle='#1b5e20';c.fillRect(0,0,w,28);c.fillStyle='#4e342e';c.fillRect(12,28,8,12);});
-    makeTex(this,'wall',32,32,(c,w,h)=>{c.fillStyle='#37474f';c.fillRect(0,0,w,h);dots(c,50,['#263238','#455a64']);});
-    makeTex(this,'floor',32,32,(c,w,h)=>{c.fillStyle='#616161';c.fillRect(0,0,w,h);dots(c,40,['#757575','#424242']);});
-    makeTex(this,'portal',32,32,(c,w,h)=>{c.fillStyle='#6a1b9a';c.fillRect(0,0,w,h);c.fillStyle='#ab47bc';c.fillRect(4,4,w-8,h-8);});
-    makeTex(this,'forge',36,36,(c,w,h)=>{c.fillStyle='#f57c00';c.fillRect(0,0,w,h);c.fillStyle = '#ffb74d';c.fillRect(6,6,w-12,h-12);}); /* <-- fixed */
-    makeTex(this,'npc',28,28,(c,w,h)=>{c.fillStyle='#7e57c2';c.fillRect(0,0,w,h);});
-    makeTex(this,'chest',28,20,(c,w,h)=>{c.fillStyle='#6d4c41';c.fillRect(0,0,w,h);c.fillStyle='#ffeb3b';c.fillRect(12,8,4,4);});
-    makeTex(this,'door',32,32,(c,w,h)=>{c.fillStyle='#3e2723';c.fillRect(0,0,w,h);});
-    makeTex(this,'heart',14,14,(c,w,h)=>{c.fillStyle='#e53935';c.beginPath();c.arc(5,5,4,0,Math.PI*2);c.arc(9,5,4,0,Math.PI*2);c.fill();c.fillRect(3,7,8,6);});
-  }
-  create(){this.scene.start('World',{mapId:SAVE.map,spawn:SAVE.spawn});}
+function genWorld(){
+// base grass
+for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++) set(x,y,0);
+// rivers (noise threshold)
+for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++){
+const n = noise(x*0.06,y*0.06,5);
+if(n<0.38) set(x,y,2);
+}
+// paths (simple road grid)
+for(let y=8;y<MAP_H;y+=16) for(let x=0;x<MAP_W;x++) if(at(x,y)!==2) set(x,y,1);
+for(let x=6;x<MAP_W;x+=18) for(let y=0;y<MAP_H;y++) if(at(x,y)!==2) set(x,y,1);
+
+// trees sprinkled on grass
+for(let i=0;i<1400;i++){
+const x=(Math.random()*MAP_W)|0, y=(Math.random()*MAP_H)|0;
+if(at(x,y)===0 && noise(x*0.2,y*0.2)>0.52) set(x,y,3);
+}
+}
+genWorld();
+
+/* ========= Player ========= */
+const player = {
+x: MAP_W*T*0.5, y: MAP_H*T*0.5,
+vx:0, vy:0, sp: 260, dashMult: 2.4, dash:0, face: 'down', anim:0, hp:100
+};
+const keys = {};
+addEventListener('keydown',e=>{ keys[e.key]=true; });
+addEventListener('keyup',e=>{ keys[e.key]=false; });
+
+/* ========= Camera ========= */
+const cam = { x: player.x, y: player.y };
+function camUpdate(dt){
+const ease = 1 - Math.pow(0.001, dt); // exponential smoothing
+cam.x = cam.x + (player.x - cam.x)*ease;
+cam.y = cam.y + (player.y - cam.y)*ease;
 }
 
-/* ===== Maps ===== */
-const MAPS={
-  overworld:{tile:32,cols:40,rows:26,
-    data:(()=>{const r=26,c=40,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(0));}
-      for(let x=0;x<c;x++){t[0][x]=3;t[r-1][x]=3}for(let y=0;y<r;y++){t[y][0]=3;t[y][c-1]=3}
-      for(let x=4;x<36;x++)t[13][x]=1;for(let y=6;y<20;y++)t[y][8]=1;
-      for(let y=3;y<9;y++)for(let x=26;x<34;x++)t[y][x]=2;
-      t[13][35]=4; t[10][35]=4;
-      return t;})(),
-    portals:[{x:35,y:13,to:'dungeon',toPos:{x:96,y:96}},{x:35,y:10,to:'bossroom',toPos:{x:320,y:192}}],
-    forge:{x:6*32+16,y:13*32+16}, npc:{x:10*32+16,y:13*32+16},
-    chests:[{x:14*32+16,y:15*32+16,loot:'keys',amount:1},{x:18*32+16,y:9*32+16,loot:'shards',amount:25}],
-    doors:[], enemies:[{x:22*32+16,y:12*32+16},{x:18*32+16,y:8*32+16},{x:24*32+16,y:6*32+16}]
-  },
-  dungeon:{tile:32,cols:28,rows:18,
-    data:(()=>{const r=18,c=28,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(6));}
-      for(let x=0;x<c;x++){t[0][x]=5;t[r-1][x]=5}for(let y=0;y<r;y++){t[y][0]=5;t[y][c-1]=5}
-      for(let x=2;x<c-2;x++)t[6][x]=5; for(let y=6;y<r-2;y++)t[y][12]=5; t[6][12]=7;
-      t[1][1]=4;
-      return t;})(),
-    portals:[{x:1,y:1,to:'overworld',toPos:{x:35*32+16,y:13*32+16}}],
-    forge:null,npc:null,
-    chests:[{x:6*32+16,y:5*32+16,loot:'shards',amount:40},{x:18*32+16,y:10*32+16,loot:'keys',amount:1}],
-    doors:[{tx:12,ty:6,mapTo:'open'}],
-    enemies:[{x:8*32+16,y:10*32+16},{x:14*32+16,y:3*32+16},{x:6*32+16,y:12*32+16},{x:18*32+16,y:6*32+16}]
-  },
-  bossroom:{tile:32,cols:24,rows:16,boss:'boss',
-    data:(()=>{const r=16,c=24,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(6));}
-      for(let x=0;x<c;x++){t[0][x]=5;t[r-1][x]=5}for(let y=0;y<r;y++){t[y][0]=5;t[y][c-1]=5}
-      t[14][2]=4; return t;})(),
-    portals:[{x:2,y:14,to:'overworld',toPos:{x:35*32+16,y:10*32+16}}],
-    chests:[],doors:[],enemies:[]
-  }
+/* ========= Procedural materials ========= */
+const mat = {
+grass(x,y,t){
+// multi-layer green with subtle wind
+const g = 0.55 + 0.35*noise(x*0.06+Math.sin(t*.3)*.1, y*0.06+Math.cos(t*.2)*.1, 5);
+const d = 0.03 * noise(x*.8,y*.8,2);
+const r = 25+g*10, gr = 120+g*80, b = 40+g*35;
+return `rgb(${r|0},${gr|0},${(b+d*255)|0})`;
+},
+path(x,y){
+const n = noise(x*0.15,y*0.15,3);
+const c = 170 + n*40;
+return `rgb(${(c)|0},${(c-8)|0},${(c-16)|0})`;
+},
+water(x,y,t){
+const w1 = noise(x*0.08+ t*0.3, y*0.08+ t*0.25, 4);
+const w2 = noise(x*0.20- t*0.2, y*0.20+ t*0.22, 3);
+const n = (w1*0.7 + w2*0.3);
+const c = 130 + n*120;
+const b = 200 + n*40;
+return `rgb(${(40+n*40)|0},${(c)|0},${(b)|0})`;
+}
 };
 
-/* ===== World Scene ===== */
-class World extends Phaser.Scene{
-  constructor(){super('World');}
-  init(d){this.mapId=d.mapId||'overworld';this.spawn=d.spawn||{x:200,y:300};}
-  create(){
-    this.hearts=SAVE.hearts; this.maxHearts=SAVE.maxHearts; this.stamina=SAVE.stamina; this.maxStamina=SAVE.maxStamina;
-    this.iframes=0; this.blocking=false;
-
-    this.cursors=this.input.keyboard.createCursorKeys();
-    this.keys=this.input.keyboard.addKeys('W,A,S,D,J,K,L,E,P');
-
-    this.loadMap(this.mapId);
-
-    this.player=this.physics.add.image(this.spawn.x,this.spawn.y,'pl').setDepth(10);
-    this.player.setCollideWorldBounds(true); this.player.speed=170;
-
-    this.cameras.main.setBounds(0,0,this.worldW,this.worldH);
-    this.cameras.main.startFollow(this.player,true,0.08,0.08);
-
-    this.enemies=this.physics.add.group();
-    (this.mapDef.enemies||[]).forEach(e=>{const m=this.physics.add.image(e.x,e.y,'slime');m.hp=28;this.enemies.add(m);});
-
-    if(this.mapDef.boss){
-      this.boss=this.physics.add.image(this.worldW/2,this.worldH/2,this.mapDef.boss); this.boss.hp=220;
-    }
-
-    this.chestGroup=this.physics.add.staticGroup();
-    (this.mapDef.chests||[]).forEach(c=>{const box=this.chestGroup.create(c.x,c.y,'chest'); box.loot=c.loot; box.amount=c.amount;});
-
-    this.doorGroup=this.physics.add.staticGroup();
-    (this.mapDef.doors||[]).forEach(d=>{const door=this.doorGroup.create(d.tx*this.tile+this.tile/2,d.ty*this.tile+this.tile/2,'door'); door.tx=d.tx; door.ty=d.ty;});
-
-    if(this.mapDef.forge) this.forge=this.physics.add.staticImage(this.mapDef.forge.x,this.mapDef.forge.y,'forge');
-    if(this.mapDef.npc)   this.npc=this.physics.add.staticImage(this.mapDef.npc.x,this.mapDef.npc.y,'npc');
-
-    // Use a valid texture for invisible colliders to avoid texture errors
-    this.solidBodies=this.physics.add.staticGroup();
-    for(let y=0;y<this.rows;y++){
-      for(let x=0;x<this.cols;x++){
-        if(solid(this.map[y][x])){
-          const b=this.solidBodies.create(x*this.tile+this.tile/2,y*this.tile+this.tile/2,'wall');
-          b.body.setSize(this.tile,this.tile);
-          b.setVisible(false);
-        }
-      }
-    }
-    this.physics.add.collider(this.player,this.solidBodies);
-    if(this.forge) this.physics.add.collider(this.player,this.forge);
-    if(this.npc)   this.physics.add.collider(this.player,this.npc);
-
-    this.physics.add.overlap(this.player,this.enemies,()=>{if(!this.blocking)this.hit(6);});
-    if(this.boss) this.physics.add.overlap(this.player,this.boss,()=>{if(!this.blocking)this.hit(10);});
-
-    this.statsEl=document.getElementById('stats'); this.heartsEl=document.getElementById('hearts');
-    this.panel=document.getElementById('panel'); this.panelTitle=document.getElementById('panelTitle'); this.panelText=document.getElementById('panelText'); this.panelBtns=document.getElementById('panelBtns');
-    this.refreshHUD();
-  }
-
-  loadMap(id){
-    this.mapId=id; this.mapDef=MAPS[id]; this.tile=this.mapDef.tile; this.cols=this.mapDef.cols; this.rows=this.mapDef.rows;
-    this.map=this.mapDef.data; this.worldW=this.cols*this.tile; this.worldH=this.rows*this.tile;
-    this.add.rectangle(this.worldW/2,this.worldH/2,this.worldW,this.worldH,0x0e1116).setDepth(0);
-    for(let y=0;y<this.rows;y++){for(let x=0;x<this.cols;x++){const code=this.map[y][x];const key=tileKey(code);this.add.image(x*this.tile,y*this.tile,key).setOrigin(0).setDepth(1);}}
-    this.portals={}; (this.mapDef.portals||[]).forEach(p=>{this.portals[p.y+','+p.x]=p;});
-  }
-
-  openPanel(title,text,btns){
-    this.panelTitle.textContent=title;
-    this.panelText.textContent=typeof text==='string'?text:'';
-    this.panelBtns.innerHTML='';
-    (btns||[]).forEach(b=>{
-      const el=document.createElement('button');
-      el.textContent=b.label;
-      el.disabled=!!b.disabled;
-      el.onclick=()=>{this.panel.style.display='none'; b.onClick&&b.onClick();};
-      this.panelBtns.appendChild(el);
-    });
-    this.panel.style.display='block';
-  }
-
-  update(_,dt){
-    GP.update();
-    const delta=dt/1000;
-    this.iframes=Math.max(0,this.iframes-delta);
-    this.stamina=Math.min(this.maxStamina,this.stamina+18*delta);
-
-    let vx=0,vy=0;
-    if(this.cursors.left.isDown||this.keys.A.isDown)vx=-1; else if(this.cursors.right.isDown||this.keys.D.isDown)vx=1;
-    if(this.cursors.up.isDown||this.keys.W.isDown)vy=-1; else if(this.cursors.down.isDown||this.keys.S.isDown)vy=1;
-    if(GP.connected){const ax=GP.axes[0]||0, ay=GP.axes[1]||0; if(Math.abs(ax)>0.25)vx=ax; if(Math.abs(ay)>0.25)vy=ay;}
-    const len=Math.hypot(vx,vy)||1;
-    this.player.setVelocity((vx/len)*this.player.speed,(vy/len)*this.player.speed);
-
-    const justAtk=Phaser.Input.Keyboard.JustDown(this.keys.J)||(GP.connected&&GP.buttons[0]);
-    const justDash=Phaser.Input.Keyboard.JustDown(this.keys.L)||(GP.connected&&GP.buttons[2]);
-    const justInt =Phaser.Input.Keyboard.JustDown(this.keys.E)||(GP.connected&&GP.buttons[3]);
-    const justMenu=Phaser.Input.Keyboard.JustDown(this.keys.P)||(GP.connected&&GP.buttons[9]);
-    this.blocking=this.keys.K.isDown || (GP.connected&&GP.buttons[1]);
-
-    if(justAtk)this.tryAttack();
-    if(justDash)this.tryDash();
-    if(justInt)this.tryInteract();
-    if(justMenu)this.openMenu();
-  }
-
-  tryAttack(){
-    const dmg=Math.max(1,EQUIP.atk());
-    this.enemies.children.iterate(m=>{
-      if(m&&m.active&&Phaser.Math.Distance.Between(m.x,m.y,this.player.x,this.player.y)<52){
-        m.hp-=dmg; m.setTint(0xffaaaa); this.time.delayedCall(120,()=>m.clearTint());
-        if(m.hp<=0){m.destroy();EQUIP.shards+=rand(2,6);this.refreshHUD();save();}
-      }
-    });
-    if(this.boss&&this.boss.active&&Phaser.Math.Distance.Between(this.boss.x,this.boss.y,this.player.x,this.player.y)<64){
-      this.boss.hp-=dmg; this.boss.setTint(0xfff59d); this.time.delayedCall(120,()=>this.boss.clearTint());
-      if(this.boss.hp<=0){EQUIP.shards+=100; this.boss.destroy(); save(); this.refreshHUD(); this.openPanel('Boss Down!','You earned 100 Shards.',[{label:'Back',onClick:()=>this.gotoMap('overworld',{x:35*32+16,y:10*32+16})}]);}
-    }
-  }
-  tryDash(){
-    if(this.stamina<25)return;
-    this.stamina-=25;
-    const v=this.player.body.velocity; const mag=Math.hypot(v.x,v.y)||1;
-    this.player.x+=(v.x/mag)*70; this.player.y+=(v.y/mag)*70;
-    this.refreshHUD();
-  }
-  tryInteract(){
-    if(this.forge && Phaser.Math.Distance.Between(this.player.x,this.player.y,this.forge.x,this.forge.y)<50){
-      const canW=EQUIP.canUp('sword'),canS=EQUIP.canUp('shield'),canA=EQUIP.canUp('armor');
-      const cw=EQUIP.cost('sword'), cs=EQUIP.cost('shield'), ca=EQUIP.cost('armor');
-      const btns=[
-        {label:canW?`Upgrade Sword (${cw})`:`Sword Max/Locked`,onClick:()=>{EQUIP.up('sword');this.refreshHUD();}},
-        {label:canS?`Upgrade Shield (${cs})`:`Shield Max/Locked`,onClick:()=>{EQUIP.up('shield');this.refreshHUD();}},
-        {label:canA?`Upgrade Armor (${ca})`:`Armor Max/Locked`,onClick:()=>{EQUIP.up('armor');this.refreshHUD();}},
-        {label:'Close'}
-      ];
-      this.openPanel('Forge — Spend Shards','Choose an upgrade.',btns); /* <-- fixed arg order */
-      return;
-    }
-    let opened=false;
-    this.chestGroup.children.iterate(ch=>{
-      if(opened||!ch.active)return;
-      if(Phaser.Math.Distance.Between(this.player.x,this.player.y,ch.x,ch.y)<46){
-        opened=true; ch.disableBody(true,true);
-        if(ch.loot==='shards'){EQUIP.shards+=ch.amount; this.openPanel('Found Shards','+'+ch.amount,[{label:'OK'}]);}
-        if(ch.loot==='keys'){EQUIP.keys+=ch.amount; this.openPanel('Found Key','+'+ch.amount,[{label:'OK'}]);}
-        save(); this.refreshHUD();
-      }
-    });
-    if(opened)return;
-    let doorUsed=false;
-    this.doorGroup.children.iterate(d=>{
-      if(doorUsed)return;
-      if(Phaser.Math.Distance.Between(this.player.x,this.player.y,d.x,d.y)<40){
-        if(EQUIP.keys>0){EQUIP.keys--; d.disableBody(true,true); doorUsed=true; this.refreshHUD(); save();}
-        else this.openPanel('Locked Door','You need a Key.',[{label:'OK'}]);
-      }
-    });
-    if(doorUsed)return;
-    const tx=Math.floor(this.player.x/this.tile), ty=Math.floor(this.player.y/this.tile), key=ty+','+tx;
-    if(this.portals[key]){const p=this.portals[key]; this.gotoMap(p.to,p.toPos);}
-  }
-  openMenu(){
-    const n=EQUIP.names();
-    this.openPanel('Menu',`Gear:
-- ${n.sword}
-- ${n.shield}
-- ${n.armor}
-
-ATK ${EQUIP.atk()} • DEF ${EQUIP.def()}
-Keys ${EQUIP.keys} • Shards ${EQUIP.shards}
-Hearts ${this.hearts}/${this.maxHearts} • Stamina ${Math.round(this.stamina)}`,[{label:'Save',onClick:()=>{SAVE.map=this.mapId;SAVE.spawn={x:this.player.x,y:this.player.y};save();}},{label:'Close'}]);
-  }
-  gotoMap(id,spawn){this.scene.restart({mapId:id,spawn});}
-  hit(dmg){
-    if(this.iframes>0)return;
-    const mitigated=Math.max(1,dmg-EQUIP.def());
-    const heartsLost=Math.ceil(mitigated/6);
-    this.hearts=Math.max(0,this.hearts-heartsLost);
-    this.iframes=.7; this.player.setTint(0xff7777); this.time.delayedCall(140,()=>this.player.clearTint());
-    if(this.hearts<=0){this.openPanel('You fell...','Loading last save.',[{label:'Load',onClick:()=>location.reload()}]);}
-    this.refreshHUD();
-  }
-  refreshHUD(){
-    const h=document.getElementById('hearts'); h.innerHTML='';
-    for(let i=0;i<this.maxHearts;i++){const s=document.createElement('span'); s.className='heart'+(i<this.hearts?'':' empty'); h.appendChild(s);}
-    const n=EQUIP.names();
-    document.getElementById('stats').innerHTML=
-      `Weapon: <strong>${n.sword}</strong> • Shield: <strong>${n.shield}</strong> • Armor: <strong>${n.armor}</strong> |
-       ATK <strong>${EQUIP.atk()}</strong> • DEF <strong>${EQUIP.def()}</strong> • Keys <strong>${EQUIP.keys}</strong> • Shards <strong>${EQUIP.shards}</strong>`;
-  }
+/* Pre-painted tile cache for speed */
+const tileCache = new Map();
+function paintTile(type, t){
+const key = type+'|'+(t|0);
+if(tileCache.has(key)) return tileCache.get(key);
+const off = new OffscreenCanvas(T, T), ox = off.getContext('2d');
+for(let py=0;py<T;py++){
+for(let px=0;px<T;px++){
+const wx = px/T, wy = py/T;
+let c = '#000';
+if(type===0) c = mat.grass(wx,wy,t);
+if(type===1) c = mat.path(wx,wy);
+if(type===2) c = mat.water(wx,wy,t);
+ox.fillStyle = c; ox.fillRect(px,py,1,1);
+}
+}
+// add slight vignette / bevel to each tile
+const grd = ox.createLinearGradient(0,0,T,T);
+grd.addColorStop(0,'rgba(255,255,255,.04)');
+grd.addColorStop(1,'rgba(0,0,0,.12)');
+ox.fillStyle = grd; ox.fillRect(0,0,T,T);
+tileCache.set(key, off);
+return off;
 }
 
-/* ===== Phaser (force Canvas) ===== */
-new Phaser.Game({type:Phaser.CANVAS,width:960,height:540,parent:'game',backgroundColor:'#0d1117',physics:{default:'arcade',arcade:{gravity:{y:0},debug:false}},scene:[Boot,World]});
+/* ========= Rendering ========= */
+function drawWorld(t){
+const w = cv.width, h = cv.height;
+// tiles visible in viewport
+const startX = Math.floor((cam.x - w/2)/T)-1;
+const startY = Math.floor((cam.y - h/2)/T)-1;
+const endX = Math.ceil((cam.x + w/2)/T)+1;
+const endY = Math.ceil((cam.y + h/2)/T)+1;
 
-/* ===== Friendly error overlay ===== */
-window.addEventListener('error', e=>{
-  const box=document.createElement('div');
-  box.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;background:#b00020;color:#fff;padding:8px;border-radius:8px;font:12px/1.3 system-ui;z-index:99999';
-  box.textContent='Error: '+(e.message||e.error);
-  document.body.appendChild(box);
+for(let y=startY; y<=endY; y++){
+if(y<0||y>=MAP_H) continue;
+for(let x=startX; x<=endX; x++){
+if(x<0||x>=MAP_W) continue;
+const type = at(x,y);
+const off = paintTile(type, t*60); // time-based for water shimmer
+cx.drawImage(off, x*T - cam.x + w/2, y*T - cam.y + h/2);
+}
+}
+
+// trees (soft round canopy + shadow)
+for(let y=startY; y<=endY; y++){
+if(y<0||y>=MAP_H) continue;
+for(let x=startX; x<=endX; x++){
+if(x<0||x>=MAP_W) continue;
+if(at(x,y)===3){
+const px = x*T - cam.x + w/2 + T/2;
+const py = y*T - cam.y + h/2 + T/2;
+// shadow
+cx.fillStyle='rgba(0,0,0,.25)';
+cx.beginPath(); cx.ellipse(px+8,py+12,T*.32,T*.18,0,0,Math.PI*2); cx.fill();
+// canopy
+const grd = cx.createRadialGradient(px-6,py-10,8, px,py, T*.42);
+grd.addColorStop(0,'#77c96a');
+grd.addColorStop(1,'#237a2b');
+cx.fillStyle=grd;
+cx.beginPath(); cx.arc(px,py,T*.38,0,Math.PI*2); cx.fill();
+// trunk
+cx.strokeStyle='#7a4b2a'; cx.lineWidth=5; cx.lineCap='round';
+cx.beginPath(); cx.moveTo(px,py+10); cx.lineTo(px,py+T*.28); cx.stroke();
+}
+}
+}
+}
+
+function drawPlayer(dt,t){
+const w=cv.width,h=cv.height;
+const px = player.x - cam.x + w/2, py = player.y - cam.y + h/2;
+
+// shadow
+cx.fillStyle='rgba(0,0,0,.32)';
+cx.beginPath(); cx.ellipse(px+8,py+18,18,10,0,0,Math.PI*2); cx.fill();
+
+// body (rounded, shaded)
+const body = cx.createLinearGradient(px-12,py-22, px+12,py+26);
+body.addColorStop(0,'#58b2ff');
+body.addColorStop(1,'#1463c4');
+cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24,32,44,12); cx.fill();
+
+// head
+const head = cx.createRadialGradient(px-4,py-18,4, px,py-8,18);
+head.addColorStop(0,'#ffe1c7'); head.addColorStop(1,'#cc9c70');
+cx.fillStyle=head; cx.beginPath(); cx.arc(px,py-10,12,0,Math.PI*2); cx.fill();
+
+// simple sword swing indicator when attacking
+if(attackTimer>0){
+cx.strokeStyle='rgba(255,255,255,.9)'; cx.lineWidth=4;
+const ang = Math.sin((1-attackTimer)*Math.PI)*1.2;
+const r=36; cx.beginPath();
+cx.arc(px,py, r, -0.6+ang, 0.6+ang); cx.stroke();
+}
+}
+
+/* ========= Movement / collisions ========= */
+function tileAtWorld(wx,wy){
+const tx = Math.floor(wx/T), ty = Math.floor(wy/T);
+if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H) return 2; // treat out-of-bounds as water
+return at(tx,ty);
+}
+function isBlocked(type){ return type===2 || type===3; }
+
+let attackTimer = 0;
+function update(dt){
+// input vector
+let ix = (keys['a']||keys['ArrowLeft']?-1:0)+(keys['d']||keys['ArrowRight']?1:0);
+let iy = (keys['w']||keys['ArrowUp']?-1:0)+(keys['s']||keys['ArrowDown']?1:0);
+const len = Math.hypot(ix,iy)||1; ix/=len; iy/=len;
+
+const speed = player.sp * (keys['Shift']?player.dashMult:1);
+player.vx = ix*speed; player.vy = iy*speed;
+
+let nx = player.x + player.vx*dt, ny = player.y + player.vy*dt;
+
+// simple collision: prevent entering water/trees
+const r = 14;
+const check = (x,y)=>{
+const t = tileAtWorld(x,y);
+return isBlocked(t);
+};
+if(!check(nx, player.y-r) && !check(nx, player.y+r)) player.x = nx;
+if(!check(player.x-r, ny) && !check(player.x+r, ny)) player.y = ny;
+
+// attack
+if(keys['k']||keys['K']) attackTimer = 0.22;
+attackTimer = Math.max(0, attackTimer - dt);
+
+camUpdate(dt);
+}
+
+/* ========= Post FX ========= */
+function postFX(){
+// vignette
+const w=cv.width,h=cv.height;
+const g=cx.createRadialGradient(w/2,h/2, h*.35, w/2,h/2, h*.65);
+g.addColorStop(0,'rgba(0,0,0,0)');
+g.addColorStop(1,'rgba(0,0,0,.55)');
+cx.fillStyle=g; cx.fillRect(0,0,w,h);
+// subtle scanlines
+cx.fillStyle='rgba(255,255,255,.04)';
+for(let y=0;y<h;y+=3){ cx.fillRect(0,y,w,1); }
+}
+
+/* ========= Main loop ========= */
+let last = performance.now()/1000;
+function frame(){
+const now = performance.now()/1000, dt = Math.min(0.033, now-last); last=now;
+
+update(dt);
+drawWorld(now);
+drawPlayer(dt, now);
+postFX();
+
+requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ========= Mobile touch (simple) ========= */
+let touchId=null, tStart=null;
+cv.addEventListener('touchstart',e=>{
+const t=e.changedTouches[0]; touchId=t.identifier; tStart={x:t.clientX,y:t.clientY};
 });
-window.addEventListener('unhandledrejection', e=>{
-  const box=document.createElement('div');
-  box.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;background:#b00020;color:#fff;padding:8px;border-radius:8px;font:12px/1.3 system-ui;z-index:99999';
-  box.textContent='Promise error: '+(e.reason&&e.reason.message||e.reason);
-  document.body.appendChild(box);
+cv.addEventListener('touchmove',e=>{
+const t=[...e.changedTouches].find(t=>t.identifier===touchId); if(!t||!tStart) return;
+const dx=t.clientX-tStart.x, dy=t.clientY-tStart.y;
+keys['a']=dx<-12; keys['d']=dx>12; keys['w']=dy<-12; keys['s']=dy>12;
 });
+cv.addEventListener('touchend',()=>{ keys['a']=keys['d']=keys['w']=keys['s']=false; touchId=null; });
+
+/* ========= Pause/Menu placeholder ========= */
+let paused=false;
+addEventListener('keydown',e=>{ if(e.key==='p'||e.key==='P'){ paused=!paused; }});
 </script>
 </body>
 </html>

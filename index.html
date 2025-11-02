@@ -96,12 +96,12 @@
     constructor(){ super('Boot'); }
     preload(){
       // Player
-      makeTex(this,'pl',28,28,(c,w,h)=>{ c.fillStyle='#1e88e5';c.fillRect(0,0,w,h); c.fillStyle='#0d47a1';c.fillRect(2,2,w-4,h-4); c.fillStyle='#90caf9';c.fillRect(6,8,w-12,6); c.fillStyle='#263238';c.fillRect(11,18,6,6); });
+      makeTex(this,'pl',28,28,(c,w,h)=>{ c.fillStyle='#1e88e5';c.fillRect(0,0,w,h); c.fillStyle='#0d47a1';c.fillRect(2,2,w-4,h-4); c.fillStyle='#90caf9';c.fillRect(6,8,w-12,6); c.fillStyle:'#263238';c.fillRect(11,18,6,6); });
       // Enemies
       makeTex(this,'slime',26,22,(c,w,h)=>{ c.fillStyle='#8bc34a';c.fillRect(0,2,w,h-2); c.fillStyle='#558b2f';c.fillRect(2,4,w-4,h-6); c.fillStyle='#c5e1a5';c.fillRect(6,6,w-12,6);} );
-      makeTex(this,'mosslord',42,42,(c,w,h)=>{ c.fillStyle='#2e7d32';c.fillRect(0,0,w,h); c.fillStyle='#1b5e20';c.fillRect(3,3,w-6,h-6); c.fillStyle='#a5d6a7';c.fillRect(10,10,w-20,12);} );
-      makeTex(this,'cinderwyrm',46,46,(c,w,h)=>{ c.fillStyle='#ef6c00';c.fillRect(0,0,w,h); c.fillStyle='#e65100';c.fillRect(3,3,w-6,h-6); c.fillStyle='#ffe0b2';c.fillRect(12,14,w-24,8);} );
-      makeTex(this,'warden',46,46,(c,w,h)=>{ c.fillStyle='#ffd54a';c.fillRect(0,0,w,h); c.fillStyle='#b28900';c.fillRect(3,3,w-6,h-6); c.fillStyle='#fff59d';c.fillRect(12,14,w-24,8);} );
+      makeTex(this,'mosslord',42,42,(c,w,h)=>{ c.fillStyle='#2e7d32';c.fillRect(0,0,w,h); c.fillStyle='#1b5e20';c.fillRect(3,3,w-6,h-6); c.fillStyle:'#a5d6a7';c.fillRect(10,10,w-20,12);} );
+      makeTex(this,'cinderwyrm',46,46,(c,w,h)=>{ c.fillStyle='#ef6c00';c.fillRect(0,0,w,h); c.fillStyle:'#e65100';c.fillRect(3,3,w-6,h-6); c.fillStyle:'#ffe0b2';c.fillRect(12,14,w-24,8);} );
+      makeTex(this,'warden',46,46,(c,w,h)=>{ c.fillStyle='#ffd54a';c.fillRect(0,0,w,h); c.fillStyle:'#b28900';c.fillRect(3,3,w-6,h-6); c.fillStyle:'#fff59d';c.fillRect(12,14,w-24,8);} );
       // Tiles
       makeTex(this,'grass',32,32,(c,w,h)=>{ c.fillStyle='#2e7d32';c.fillRect(0,0,w,h); for(let i=0;i<60;i++){ c.fillStyle=(i%3?'#388e3c':'#1b5e20'); dot(c);} });
       makeTex(this,'path',32,32,(c,w,h)=>{ c.fillStyle='#8d6e63';c.fillRect(0,0,w,h); for(let i=0;i<50;i++){ c.fillStyle=(i%2?'#6d4c41':'#a1887f'); dot(c);} });
@@ -110,12 +110,12 @@
       makeTex(this,'wall',32,32,(c,w,h)=>{ c.fillStyle='#37474f';c.fillRect(0,0,w,h); for(let i=0;i<60;i++){ c.fillStyle=(i%2?'#263238':'#455a64'); dot(c);} });
       makeTex(this,'floor',32,32,(c,w,h)=>{ c.fillStyle='#616161';c.fillRect(0,0,w,h); for(let i=0;i<45;i++){ c.fillStyle=(i%2?'#757575':'#424242'); dot(c);} });
       makeTex(this,'portal',32,32,(c,w,h)=>{ c.fillStyle='#6a1b9a';c.fillRect(0,0,w,h); c.fillStyle='#ab47bc';c.fillRect(4,4,w-8,h-8);} );
-      makeTex(this,'forge',36,36,(c,w,h)=>{ c.fillStyle='#f57c00';c.fillRect(0,0,w,h); c.fillStyle='#ffb74d';c.fillRect(6,6,w-12,h-12);} );
-      makeTex(this,'npc',28,28,(c,w,h)=>{ c.fillStyle='#7e57c2';c.fillRect(0,0,w,h); c.fillStyle='#b39ddb';c.fillRect(4,6,w-8,8);} );
-      makeTex(this,'chest',28,20,(c,w,h)=>{ c.fillStyle='#6d4c41';c.fillRect(0,0,w,h); c.fillStyle='#a1887f';c.fillRect(2,2,w-4,h-6); c.fillStyle='#ffeb3b';c.fillRect(12,8,4,4);} );
-      makeTex(this,'door',32,32,(c,w,h)=>{ c.fillStyle='#3e2723';c.fillRect(0,0,w,h); c.fillStyle='#5d4037';c.fillRect(2,2,w-4,h-4);} );
-      makeTex(this,'key',16,16,(c,w,h)=>{ c.fillStyle='#ffd54a';c.fillRect(4,4,8,8); c.fillStyle='#b28900';c.fillRect(2,6,4,4);} );
-      makeTex(this,'heart',14,14,(c,w,h)=>{ c.fillStyle='#e53935';c.beginPath(); c.arc(5,5,4,0,Math.PI*2); c.arc(9,5,4,0,Math.PI*2); c.fill(); c.fillRect(3,7,8,6);} );
+      makeTex(this,'forge',36,36,(c,w,h)=>{ c.fillStyle='#f57c00';c.fillRect(0,0,w,h); c.fillStyle:'#ffb74d';c.fillRect(6,6,w-12,h-12);} );
+      makeTex(this,'npc',28,28,(c,w,h)=>{ c.fillStyle='#7e57c2';c.fillRect(0,0,w,h); c.fillStyle:'#b39ddb';c.fillRect(4,6,w-8,8);} );
+      makeTex(this,'chest',28,20,(c,w,h)=>{ c.fillStyle='#6d4c41';c.fillRect(0,0,w,h); c.fillStyle:'#a1887f';c.fillRect(2,2,w-4,h-6); c.fillStyle:'#ffeb3b';c.fillRect(12,8,4,4);} );
+      makeTex(this,'door',32,32,(c,w,h)=>{ c.fillStyle:'#3e2723';c.fillRect(0,0,w,h); c.fillStyle:'#5d4037';c.fillRect(2,2,w-4,h-4);} );
+      makeTex(this,'key',16,16,(c,w,h)=>{ c.fillStyle:'#ffd54a';c.fillRect(4,4,8,8); c.fillStyle:'#b28900';c.fillRect(2,6,4,4);} );
+      makeTex(this,'heart',14,14,(c,w,h)=>{ c.fillStyle:'#e53935';c.beginPath(); c.arc(5,5,4,0,Math.PI*2); c.arc(9,5,4,0,Math.PI*2); c.fill(); c.fillRect(3,7,8,6);} );
     }
     create(){ this.scene.start('World',{mapId:SAVE.map, spawn:SAVE.spawn}); }
   }
@@ -398,8 +398,7 @@
 
 Stats: ATK ${EQUIP.atk()} • DEF ${EQUIP.def()}
 Keys: ${EQUIP.keys} • Shards: ${EQUIP.shards}
-Chapter: ${ch.name}`[
-      ],[
+Chapter: ${ch.name}`,[
         {label:'Save', onClick:()=>{ SAVE.map=this.mapId; SAVE.spawn={x:this.player.x,y:this.player.y}; save(); }},
         {label:'Close', onClick:()=>{}}
       ]);

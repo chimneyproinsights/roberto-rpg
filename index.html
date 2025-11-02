@@ -1,885 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Roberto Fantasy — The Ember of Aeloria</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Grass Horde — Tap & Survive</title>
 <style>
-:root{
-  --bg:#101218; --ui:#e8eef7; --soft:#c9d5e8; --accent:#ff4a57; --gold:#e7c766; --green:#22c55e; --blue:#5ca3ff;
-  --panel:rgba(10,12,15,.6);
-}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ui);font:600 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-#wrap{height:100%;display:flex;flex-direction:column}
-#hud{position:fixed;left:12px;top:10px;background:var(--panel);backdrop-filter:blur(6px);
-  padding:8px 12px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center;z-index:6}
-.badge{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.1);font-weight:700}
-.bar{width:160px;height:10px;background:rgba(255,255,255,.16);border-radius:999px;overflow:hidden;position:relative}
-.fill{height:100%;background:linear-gradient(90deg,#36d399,#22c55e);width:100%}
-.xp .fill{background:linear-gradient(90deg,#7da6ff,#4b7bff)}
-#lvl{padding:2px 8px;border-radius:8px;background:rgba(255,255,255,.1)}
-#tips{opacity:.9}
-kbd{background:rgba(255,255,255,.1);padding:1px 5px;border-radius:6px}
-#abilities{display:flex;gap:6px}
-.abil{width:18px;height:18px;border-radius:4px;border:1px solid rgba(255,255,255,.2);position:relative;overflow:hidden}
-.abil.lock::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(0,0,0,.35) 0 6px,rgba(0,0,0,.5) 6px 12px)}
-.abil .dot{position:absolute;width:6px;height:6px;border-radius:999px;right:2px;bottom:2px;background:#fff;opacity:.2}
-#game{flex:1;display:flex;align-items:center;justify-content:center}
-canvas{width:min(1150px,100vw);height:min(720px,100vh);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.55);background:#0b0d10}
-#banner{position:fixed;right:12px;top:10px;background:var(--panel);backdrop-filter:blur(6px);padding:8px 12px;border-radius:12px;z-index:6}
-.hint{position:fixed;right:12px;bottom:8px;opacity:.75;z-index:6}
-#pause{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:8}
-#pause .card{background:#11151c;border:1px solid rgba(255,255,255,.08);padding:18px 20px;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.5);max-width:620px}
-#pause h3{margin:0 0 10px 0}
-#pause p{margin:6px 0}
-small{opacity:.8}
-
-/* Intro overlay (cinematic crawl + battle inferno cover) */
-#intro{position:fixed;inset:0;background:linear-gradient(#0a0d12,#0b0e14);z-index:7;color:#dfe9ff;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}
-#intro .line{max-width:780px;margin:10px 20px;text-align:center;opacity:0;transform:translateY(6px);transition:opacity .8s ease, transform .8s ease;font-weight:600}
-#intro .show{opacity:1;transform:translateY(0)}
-#skip{position:absolute;bottom:18px;right:18px;opacity:.8;background:rgba(255,255,255,.08);padding:6px 10px;border-radius:10px}
-
-/* Title overlay (flat metallic gold serif + thin aura) */
-#titlePlate{
-  position:fixed; top:8%; left:50%; transform:translateX(-50%);
-  color:#e7c766; font-family: "Times New Roman", ui-serif, Georgia, serif;
-  font-weight:800; letter-spacing:.5px; text-align:center; z-index:9;
-  text-shadow:0 0 18px rgba(255,217,139,.6), 0 0 2px #000;
-  display:none; user-select:none;
-}
-#titlePlate h1{ margin:0; font-size: clamp(24px,5.4vw,54px); }
-#titlePlate h2{ margin:6px 0 0 0; font-size: clamp(16px,3.6vw,28px); opacity:.95 }
-
-/* “New Ability Unlocked” caption */
-#caption{
-  position:fixed; left:50%; bottom:70px; transform:translateX(-50%);
-  color:#fff; font-weight:700; font-size:16px; padding:8px 12px; border-radius:12px;
-  background:rgba(10,12,15,.65); border:1px solid rgba(255,255,255,.1);
-  text-shadow:0 0 8px rgba(255,215,120,.6);
-  display:none; z-index:7;
-}
-#caption .gold{background: linear-gradient(90deg,#ffd86b,#fff,#ffd86b); -webkit-background-clip:text; background-clip:text; color:transparent;}
+html,body{margin:0;height:100%;background:#0b0c10;color:#eaeaea;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#c{width:100vw;height:100vh;touch-action:none;background:#88b26b}
+#hud{position:fixed;left:12px;top:10px;background:rgba(0,0,0,.5);padding:8px 10px;border-radius:10px;font-size:14px}
+#levelUp{position:fixed;left:50%;top:18%;transform:translateX(-50%);font-weight:700;
+padding:8px 12px;border-radius:10px;background:rgba(255,200,40,.9);color:#3c2a00;display:none}
+#stick{position:fixed;left:12px;bottom:12px;width:120px;height:120px;opacity:.9;touch-action:none}
+#stick .r{position:absolute;inset:0;border-radius:999px;border:2px solid rgba(255,255,255,.35)}
+#stick .n{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px;border-radius:999px;
+background:rgba(255,255,255,.25)}
+#playTip{position:fixed;bottom:10px;right:12px;background:rgba(0,0,0,.5);padding:6px 10px;border-radius:8px;font-size:12px}
 </style>
-<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAX0lEQVRYhe2VMQ7AIAwE9/9H2i4K0g9uW0m2lQm6S8o0kX1g7f9Q9q0bQkqVqk2wQ1oC4r3mQ1bEw9ZbqZqfR9Qx6zKpQ3wRCwz7b5cG0R8l7w0f1vY0Qw1k5w0jX2oY9k5yGfM3gO1nG8+oU9i0Q8y0wH2wqB8VgQ7fH1YJvVQAAQH2YVn0x1y5oAAAAASUVORK5CYII=">
 </head>
 <body>
-<div id="wrap">
-  <div id="hud" aria-label="HUD">
-    <span class="badge">Roberto Fantasy — <b>Side-Scroll</b></span>
-    <div class="bar"><div id="hpfill" class="fill"></div></div>
-    <div class="bar xp"><div id="xpfill" class="fill" style="width:0%"></div></div>
-    <span id="lvl">LVL 1</span>
-    <div id="abilities" title="Abilities">
-      <div id="abDash" class="abil lock" style="background:#ff6a6a" aria-label="Light Dash"><span class="dot"></span></div>
-      <div id="abBurst" class="abil lock" style="background:#ffd36a" aria-label="Solar Burst"><span class="dot"></span></div>
-      <div id="abVision" class="abil lock" style="background:#6ad1ff" aria-label="Aether Vision"><span class="dot"></span></div>
-      <div id="abShield" class="abil lock" style="background:#7bff9b" aria-label="Radiant Shield"><span class="dot"></span></div>
-    </div>
-    <span id="tips">Move <kbd>A/D</kbd> • Jump <kbd>W/Space</kbd> • Dash <kbd>Shift</kbd> • Sword <kbd>K</kbd> • Laser <kbd>J</kbd> • Interact <kbd>E</kbd> • Pause <kbd>P</kbd></span>
-  </div>
-  <div id="banner">Controller: <b id="gpstat">Not connected</b></div>
-  <div id="game"><canvas id="cv" width="1280" height="720"></canvas></div>
-  <div class="hint">Aeloria awaits — purify the Ember Shrines. © You • Procedural art (no external assets)</div>
-
-  <div id="pause">
-    <div class="card">
-      <h3>⏸ Paused — The Ember of Aeloria</h3>
-      <p><b>Goal:</b> Purify Ember Shrines and rekindle the Heartfire.</p>
-      <p><b>Controls:</b> A/D move, W/Space jump, Shift dash, K sword, J laser (hold for Solar Burst), E interact (Vision), B shield, P pause.</p>
-      <p><b>Leveling:</b> Defeat creatures → gain <i>Ember Fragments</i> → auto level-up.</p>
-      <p><b>Upgrades:</b> Light Dash • Solar Burst • Aether Vision • Radiant Shield</p>
-      <p><small>Tip: Bluetooth/USB controllers supported — connect & press any button.</small></p>
-    </div>
-  </div>
-
-  <!-- Intro Cinematic -->
-  <div id="intro" role="dialog" aria-live="polite">
-    <div class="line" id="l1">“The banners of Aeloria once shone brighter than the sun itself.”</div>
-    <div class="line" id="l2">“But when the Shadow Wraith rose from the Abyss, the Lightfire was stolen — and the fortress fell to flame.”</div>
-    <div class="line" id="l3">“Now, among the ashes, one knight still stands… Eryndor, the last ember of Aeloria.”</div>
-    <div id="skip">Press any key or controller button to begin</div>
-  </div>
-
-  <!-- Title Plate -->
-  <div id="titlePlate" aria-hidden="true">
-    <h1>Roberto Fantasy — The Ember of Aeloria</h1>
-    <h2></h2>
-  </div>
-
-  <!-- HUD Caption -->
-  <div id="caption"><span id="capIcon">⚔️</span> <span class="gold" id="capText">New Ability Unlocked</span></div>
-</div>
+<div id="wrap"><canvas id="c"></canvas></div>
+<div id="hud">❤️ <span id="hp">100</span> | ⚔️ <span id="kills">0</span> | 🔄 <span id="lvl">1</span></div>
+<div id="levelUp">LEVEL UP!</div>
+<div id="stick"><div class="r"></div><div class="n" id="nub"></div></div>
+<div id="playTip">Drag to move. Survive!</div>
 
 <script>
-/* =========================================================
-   Canvas & Timing
-========================================================= */
-const cv = document.getElementById('cv'), cx = cv.getContext('2d',{alpha:false});
-const DPR = Math.min(2, window.devicePixelRatio || 1);
-cv.width = Math.round(cv.width * DPR); cv.height = Math.round(cv.height * DPR);
+(() => {
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const hudHP = document.getElementById('hp');
+const hudKills = document.getElementById('kills');
+const hudLvl = document.getElementById('lvl');
+const levelUpEl = document.getElementById('levelUp');
+const stick = document.getElementById('stick');
+const nub = document.getElementById('nub');
 
-let last = performance.now()/1000, paused=false, started=false;
-
-/* =========================================================
-   Math & Noise
-========================================================= */
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const lerp=(a,b,t)=>a+(b-a)*t;
-const rand=(a=1,b=0)=>Math.random()*(a-b)+b;
-
-function makeNoise(size=256){
-  const p = new Float32Array(size*size);
-  for(let i=0;i<p.length;i++) p[i]=Math.random();
-  const v=(x,y)=>p[((x&255)<<8)|(y&255)];
-  return (x,y,oct=4)=>{
-    let amp=1,freq=1,sum=0,norm=0;
-    for(let i=0;i<oct;i++){
-      const xi=Math.floor(x*freq), yi=Math.floor(y*freq);
-      const xf=x*freq-xi, yf=y*freq-yi;
-      const a=v(xi,yi), b=v(xi+1,yi), c=v(xi,yi+1), d=v(xi+1,yi+1);
-      const u=xf*xf*(3-2*xf), w=yf*yf*(3-2*yf);
-      const n=lerp(lerp(a,b,u), lerp(c,d,u), w);
-      sum+=n*amp; norm+=amp; amp*=.5; freq*=2;
-    }
-    return sum/norm;
-  };
+// Fit canvas to device pixels
+const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+function resize() {
+canvas.width = Math.floor(innerWidth * DPR);
+canvas.height = Math.floor(innerHeight * DPR);
 }
-const noise = makeNoise();
+addEventListener('resize', resize, {passive:true}); resize();
 
-/* =========================================================
-   Input (Keyboard + Gamepad)
-========================================================= */
-const keys = {};
-addEventListener('keydown',e=>{
-  keys[e.code]=true;
-  if(!started) beginGame(); // start music, dismiss intro
-  if(e.code==='KeyP') togglePause();
-  if(e.code==='KeyE') keys['Interact']=true;
-});
-addEventListener('keyup',e=>{ keys[e.code]=false; if(e.code==='KeyE') keys['Interact']=false; });
+// World
+const W = () => canvas.width;
+const H = () => canvas.height;
 
-const gpInfo = document.getElementById('gpstat');
-let gamepadIndex = null;
-const BTN = {A:0,B:1,X:2,Y:3,LB:4,RB:5,LT:6,RT:7,SELECT:8,START:9,LSTICK:10,RSTICK:11,UP:12,DOWN:13,LEFT:14,RIGHT:15};
-function pollGamepad(){
-  const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
-  if (gps.length){
-    if(gamepadIndex==null) gamepadIndex = gps[0].index;
-    const gp = gps.find(g=>g&&g.index===gamepadIndex) || gps[0];
-    if(!gp) return;
-    gpInfo.textContent = gp.id.split('(')[0].trim();
-    const ax = gp.axes[0] || 0;
-    keys['PAD_LEFT'] = ax<-0.3 || (gp.buttons[BTN.LEFT]?.pressed);
-    keys['PAD_RIGHT']= ax> 0.3 || (gp.buttons[BTN.RIGHT]?.pressed);
-    keys['PAD_JUMP'] = gp.buttons[BTN.A]?.pressed;
-    keys['PAD_DASH'] = gp.buttons[BTN.RB]?.pressed || gp.buttons[BTN.RT]?.pressed;
-    keys['PAD_SWORD']= gp.buttons[BTN.X]?.pressed;
-    keys['PAD_LASER']= gp.buttons[BTN.Y]?.pressed;
-    keys['PAD_INTER']= gp.buttons[BTN.LT]?.pressed;
-    keys['PAD_SHIELD']= gp.buttons[BTN.B]?.pressed;
-  } else {
-    gpInfo.textContent = 'Not connected';
-    gamepadIndex = null;
-  }
-}
-window.addEventListener('gamepadconnected',()=>{ gpInfo.textContent='Connected'; });
-window.addEventListener('gamepaddisconnected',()=>{ gpInfo.textContent='Not connected'; gamepadIndex=null; });
+const rnd = (a,b)=>Math.random()*(b-a)+a;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const dist = (a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
 
-/* =========================================================
-   Camera
-========================================================= */
-const cam = { x:0, y:0 };
-function camUpdate(dt, targetX, targetY){
-  const ease = 1 - Math.pow(0.001, dt);
-  cam.x += (targetX - cam.x)*ease;
-  cam.y += (targetY - cam.y)*ease;
-}
-
-/* =========================================================
-   World (Side-Scroll Terrain + Parallax + Battle Inferno)
-========================================================= */
-const W = cv.width, H = cv.height;
-const GROUND_Y = H*0.68;
-const SEG_W = 80;
-
-const TERRAIN_LEN = 540;
-const heights = new Float32Array(TERRAIN_LEN);
-for(let i=0;i<TERRAIN_LEN;i++){
-  const n = noise(i*0.08, 0, 4);
-  heights[i] = GROUND_Y - (n-0.5)*140;
-}
-function terrainY(x){
-  const seg = Math.floor(x/SEG_W);
-  if(seg<0) return 99999;
-  const t = (x - seg*SEG_W)/SEG_W;
-  const y0 = heights[seg] ?? heights[heights.length-1];
-  const y1 = heights[seg+1] ?? y0;
-  return lerp(y0, y1, t);
-}
-
-/* painterly background: sky, burning fortress w/ golden banners */
-function drawBackground(t){
-  const w=cv.width,h=cv.height;
-  // nightfire sky
-  const sky = cx.createLinearGradient(0,0,0,h);
-  sky.addColorStop(0,'#141b2a'); sky.addColorStop(1,'#0b0f16');
-  cx.fillStyle=sky; cx.fillRect(0,0,w,h);
-
-  // distant smoke layers (painterly strokes)
-  cx.fillStyle='rgba(255,120,80,.05)';
-  for(let i=0;i<16;i++){
-    const base = (i*220 - (cam.x*0.18)%220);
-    const cy = h*0.36 + Math.sin(i*0.7 + t*0.2)*12;
-    cx.beginPath();
-    cx.ellipse(base, cy, 90, 22, 0, 0, Math.PI*2); cx.fill();
-  }
-
-  // burning fortress silhouettes + banners (parallax)
-  for(let k=0;k<2;k++){
-    const par = 0.22 + k*0.06;
-    const baseX = (-(cam.x*par))%(w*1.5);
-    for(let j=-1;j<=1;j++){
-      const ox = baseX + j*(w*1.5) + w*0.25;
-      cx.fillStyle='#1a0f12';
-      cx.fillRect(ox+60, h*0.42, 220, 180); // main wall
-      cx.fillRect(ox+40, h*0.38, 60, 220);  // tower L
-      cx.fillRect(ox+260, h*0.36, 70, 240); // tower R
-      // crenellations
-      cx.fillRect(ox+60, h*0.42-10, 220, 12);
-      for(let c=0;c<8;c++) cx.fillRect(ox+65+c*26, h*0.42-18, 16, 8);
-      // banners (gold)
-      cx.fillStyle='#e7c766';
-      cx.fillRect(ox+72, h*0.42, 10, 54);
-      cx.beginPath(); cx.moveTo(ox+82, h*0.42+54); cx.lineTo(ox+92, h*0.42+70); cx.lineTo(ox+72, h*0.42+70); cx.closePath(); cx.fill();
-      cx.fillRect(ox+256, h*0.42, 10, 62);
-      cx.beginPath(); cx.moveTo(ox+266, h*0.42+62); cx.lineTo(ox+276, h*0.42+78); cx.lineTo(ox+256, h*0.42+78); cx.closePath(); cx.fill();
-
-      // fire glows behind slit windows
-      for(let wj=0; wj<6; wj++){
-        const wx = ox+80 + wj*28; const wy = h*0.48 + (wj%2)*16;
-        const g = cx.createRadialGradient(wx,wy,1, wx,wy, 16);
-        g.addColorStop(0,'rgba(255,160,60,.9)'); g.addColorStop(1,'rgba(255,120,60,0)');
-        cx.fillStyle=g; cx.beginPath(); cx.arc(wx,wy,18,0,Math.PI*2); cx.fill();
-      }
-    }
-  }
-
-  // near hills (parallax layer)
-  cx.fillStyle='#131c24';
-  for(let i=0;i<8;i++){
-    const base = (i*400 - (cam.x*0.45)%400);
-    cx.beginPath();
-    cx.moveTo(base, h*0.82);
-    cx.quadraticCurveTo(base+100,h*0.68, base+200,h*0.8);
-    cx.quadraticCurveTo(base+300,h*0.88, base+400,h*0.82);
-    cx.fill();
-  }
-
-  // moving embers (subtle, painterly dots)
-  cx.fillStyle='rgba(255,180,90,.08)';
-  for(let i=0;i<50;i++){
-    const ex = (i*60 - (cam.x*0.15)%60);
-    const ey = h*0.6 - (i%10)*20 - (t*20)%200;
-    cx.fillRect(ex, ey, 2, 6);
-  }
-}
-
-function drawGround(t){
-  const w=cv.width,h=cv.height;
-  const startX = cam.x - w/2 - 100, endX = cam.x + w/2 + 100;
-  for(let x=Math.floor(startX/SEG_W)*SEG_W; x<endX; x+=SEG_W){
-    const y0 = terrainY(x), y1 = terrainY(x+SEG_W);
-    // grass edge
-    cx.strokeStyle='#2fa35b'; cx.lineWidth=8;
-    cx.beginPath(); cx.moveTo(x - cam.x + w/2, y0 - cam.y + h/2);
-    cx.lineTo(x+SEG_W - cam.x + w/2, y1 - cam.y + h/2); cx.stroke();
-    // dirt fill
-    const grd = cx.createLinearGradient(0, y0 - cam.y + h/2, 0, h);
-    grd.addColorStop(0,'#5b3e2b'); grd.addColorStop(1,'#2c1e15');
-    cx.fillStyle=grd; cx.beginPath();
-    cx.moveTo(x - cam.x + w/2, y0 - cam.y + h/2);
-    cx.lineTo(x+SEG_W - cam.x + w/2, y1 - cam.y + h/2);
-    cx.lineTo(x+SEG_W - cam.x + w/2, h); cx.lineTo(x - cam.x + w/2, h);
-    cx.closePath(); cx.fill();
-    // stones
-    cx.fillStyle='rgba(255,255,255,.06)';
-    for(let k=0;k<3;k++){
-      const rx = x + rand(SEG_W), ry = lerp(y0,y1, rand());
-      cx.beginPath(); cx.ellipse(rx - cam.x + w/2, ry+rand(24,8) - cam.y + h/2, rand(8,4), rand(5,2), 0,0,Math.PI*2); cx.fill();
-    }
-  }
-}
-
-/* =========================================================
-   Player (Eryndor — red-gold armor, full helm, gold sword)
-========================================================= */
 const player = {
-  x: 200, y: terrainY(200)-40, vx:0, vy:0,
-  w:26, h:46,
-  onGround:false, dir:1,
-  hp:100, maxhp:100, invul:0,
-  lvl:1, xp:0, nextXP:50,
-  dashTimer:0, canMidDash:false,
-  attackTimer:0, laserCD:0, charge:0,
-  visionTimer:0, shieldTimer:0,
-  faceTimer:0, faceState:'calm',
-  cape:[ {x:0,y:0,vx:0,vy:0}, {x:0,y:0,vx:0,vy:0} ],
-  upgrades:{ dash:false, burst:false, vision:false, shield:false }
+x: W()/2, y: H()/2, r: 22*DPR, hp:100, speed: 2.4*DPR,
+swords: 2, orbitR: 60*DPR, orbitSpeed: 0.0038, angle:0,
+invul:0
 };
-function setFace(state, dur=0.25){ player.faceState=state; player.faceTimer=Math.max(player.faceTimer, dur); }
 
-/* =========================================================
-   Physics & Collisions
-========================================================= */
-const GRAV = 1400, MOVE = 360, JUMP_V = 560, DASH_V = 760;
-function groundCollide(px,py,w,h){
-  const feetY = py + h/2;
-  const ty = terrainY(px);
-  if (feetY >= ty-2){
-    return {hit:true, y: ty - h/2, normalY:-1};
-  }
-  return {hit:false};
+let tick=0, score=0, level=1, xp=0, nextXP=12, over=false;
+const enemies=[], sparks=[], drops=[];
+let spawnRate = 80; // lower = faster spawns
+
+// Virtual joystick
+let joyActive=false, joyCx=stick.offsetLeft+stick.clientWidth/2, joyCy=innerHeight- stick.offsetTop - stick.clientHeight/2;
+let joyDx=0, joyDy=0;
+
+function setNub(x,y){
+nub.style.transform = `translate(${x}px, ${y}px)`;
+}
+function joyStart(x,y){ joyActive=true; moveJoy(x,y); }
+function joyEnd(){ joyActive=false; joyDx=joyDy=0; setNub(0,0); }
+function moveJoy(x,y){
+const rect = stick.getBoundingClientRect();
+const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+let dx = x-cx, dy = y-cy;
+const L = Math.hypot(dx,dy); const max=rect.width*0.36;
+if(L>max){ dx*=max/L; dy*=max/L; }
+setNub(dx,dy);
+joyDx = (dx/max); joyDy = (dy/max);
 }
 
-/* =========================================================
-   Enemies & Mini-Boss
-========================================================= */
-const enemies = [];
-function spawnEnemy(x,type='crawler'){
-  const y = terrainY(x)-24;
-  const hp = type==='bramble'?90: type==='wolf'?70:48;
-  enemies.push({x, y, vx:0, vy:0, type, hp, hit:0, dir: Math.random()<.5?-1:1});
-}
-// populate
-for(let i=0;i<28;i++){
-  const x = 560 + i*220 + rand(120);
-  spawnEnemy(x, (i%5===0?'bramble': (i%3===0?'wolf':'crawler')));
-}
-// mini-boss: Shadow Wraith
-const warden = { x: 3400, y: terrainY(3400)-40, hp: 420, phase:1, alive:true, hit:0, awaken:false };
+// Touch/Mouse
+function p(e){ return e.touches? {x:e.touches[0].clientX, y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}; }
+stick.addEventListener('pointerdown', e=>{stick.setPointerCapture(e.pointerId); joyStart(p(e).x,p(e).y); e.preventDefault();},{passive:false});
+stick.addEventListener('pointermove', e=>{ if(joyActive) moveJoy(p(e).x,p(e).y);},{passive:false});
+stick.addEventListener('pointerup', e=>{joyEnd();},{passive:true});
+// also allow dragging anywhere if user misses the stick
+canvas.addEventListener('pointerdown', e=>{ joyStart(p(e).x,p(e).y); }, {passive:true});
+canvas.addEventListener('pointermove', e=>{ if(joyActive) moveJoy(p(e).x,p(e).y); }, {passive:true});
+canvas.addEventListener('pointerup', e=>{ joyEnd(); }, {passive:true});
 
-/* =========================================================
-   Shrines (Upgrades)
-========================================================= */
-const shrines = [];
-function addShrine(x,kind){
-  const y = terrainY(x)-10;
-  shrines.push({x,y,kind, purified:false, pulse:0});
-}
-addShrine(900,'dash');
-addShrine(1700,'burst');
-addShrine(2500,'vision');
-addShrine(3300,'shield');
-
-function near(a,b,dist){ return Math.abs(a-b)<dist; }
-
-/* =========================================================
-   Projectiles (Laser & Solar Burst — golden)
-========================================================= */
-const shots = [];
-function fireLaser(){
-  if(player.laserCD>0 || player.charge>0) return;
-  const speed = 900, life=0.6, dir=player.dir;
-  shots.push({x:player.x+dir*28, y:player.y-6, vx:dir*speed, vy:0, age:0, life, w:46, h:14, dmg:28, dir, type:'laser'});
-  player.laserCD = 0.22; setFace('attack', .25);
-}
-function startCharge(){ if(player.upgrades.burst) player.charge = Math.min(1.2, player.charge+0.04); }
-function releaseCharge(){
-  if(!player.upgrades.burst || player.charge<=0.2) return;
-  const power = Math.min(1, player.charge);
-  for(let i=0;i<12;i++){
-    const ang = i*(Math.PI*2/12);
-    shots.push({x:player.x, y:player.y-10, vx:Math.cos(ang)*600*power, vy:Math.sin(ang)*480*power,
-      age:0, life:0.35+0.2*power, w:28, h:10, dmg:18+16*power, dir:1, type:'burst', rot:ang});
-  }
-  player.charge=0; setFace('attack', .3);
+// Enemy factory
+function spawnEnemy(){
+const side = Math.floor(rnd(0,4));
+const margin = 40*DPR;
+let x,y;
+if(side===0){ x=rnd(-margin, W()+margin); y=-margin; }
+if(side===1){ x=W()+margin; y=rnd(-margin, H()+margin); }
+if(side===2){ x=rnd(-margin, W()+margin); y=H()+margin; }
+if(side===3){ x=-margin; y=rnd(-margin, H()+margin); }
+enemies.push({x,y, r:18*DPR, spd:rnd(0.6,1.1)*DPR, hp:2, fire:false});
 }
 
-/* =========================================================
-   Input Helpers
-========================================================= */
-function wantLeft(){ return keys['KeyA']||keys['ArrowLeft']||keys['PAD_LEFT']; }
-function wantRight(){ return keys['KeyD']||keys['ArrowRight']||keys['PAD_RIGHT']; }
-function wantJump(){ return keys['KeyW']||keys['Space']||keys['PAD_JUMP']; }
-function wantDash(){ return keys['ShiftLeft']||keys['ShiftRight']||keys['PAD_DASH']; }
-function wantSword(){ return keys['KeyK']||keys['PAD_SWORD']; }
-function wantLaser(){ return keys['KeyJ']||keys['PAD_LASER']; }
-function wantInteract(){ return keys['Interact']||keys['PAD_INTER']; }
-function wantShield(){ return keys['PAD_SHIELD']||keys['KeyB']; }
+// Sword "projectiles" that orbit the player (no separate objects stored)
+function drawSword(cx,cy,ang,glow){
+const L=36*DPR;
+const w=8*DPR;
+ctx.save();
+ctx.translate(cx,cy);
+ctx.rotate(ang);
+// glow trail
+const grad = ctx.createLinearGradient(-L,0,L,0);
+grad.addColorStop(0,'rgba(255,255,255,0)');
+grad.addColorStop(0.5,'rgba(140,220,255,.7)');
+grad.addColorStop(1,'rgba(255,255,255,0)');
+ctx.strokeStyle=grad; ctx.lineWidth=w*0.75; ctx.lineCap='round';
+ctx.beginPath(); ctx.moveTo(-L*0.9,0); ctx.lineTo(L*0.9,0); ctx.stroke();
+// blade
+ctx.strokeStyle='#e8f5ff'; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(-L,0); ctx.lineTo(L,0); ctx.stroke();
+// hilt
+ctx.fillStyle='#d1a332'; ctx.fillRect(-L-6*DPR,-w*0.7,10*DPR,w*1.4);
+ctx.restore();
+}
 
-/* =========================================================
-   Update
-========================================================= */
+function addSpark(x,y,c){ sparks.push({x,y,life:18,c}); }
+function addDrop(x,y){ drops.push({x,y,r:10*DPR, life:600}); }
+
+function levelUp(){
+level++; hudLvl.textContent=level; player.swords=Math.min(6, player.swords+1);
+player.orbitR += 4*DPR; spawnRate = Math.max(28, spawnRate-4);
+levelUpEl.style.display='block'; setTimeout(()=>levelUpEl.style.display='none', 700);
+}
+
 function update(dt){
-  pollGamepad();
+tick++;
 
-  // face decay
-  player.faceTimer = Math.max(0, player.faceTimer - dt);
-  if(player.faceTimer<=0) player.faceState = (player.onGround && (Math.abs(player.vx)>10))?'move':'calm';
+// move player
+player.x += player.speed*joyDx*dt;
+player.y += player.speed*joyDy*dt;
+player.x = clamp(player.x, 30*DPR, W()-30*DPR);
+player.y = clamp(player.y, 40*DPR, H()-30*DPR);
 
-  // movement
-  let mx = 0;
-  if(wantLeft()) mx -= 1;
-  if(wantRight()) mx += 1;
-  player.dir = (mx!==0)? Math.sign(mx) : player.dir;
+// spawn enemies
+if(tick % Math.floor(spawnRate/Math.max(1,level*0.2))===0) spawnEnemy();
 
-  const accel = player.onGround ? MOVE : MOVE*0.65;
-  player.vx += mx*accel*dt;
-  player.vx *= player.onGround ? 0.86 : 0.98;
-  player.vy += GRAV*dt;
+// move enemies
+for(let i=enemies.length-1;i>=0;i--){
+const e=enemies[i];
+const ang = Math.atan2(player.y-e.y, player.x-e.x);
+e.x += Math.cos(ang)*e.spd*dt;
+e.y += Math.sin(ang)*e.spd*dt;
 
-  if(wantJump() && player.onGround){
-    player.vy = -JUMP_V; player.onGround=false; player.canMidDash = player.upgrades.dash;
-  }
-  if(wantDash()){
-    if(player.onGround || (player.upgrades.dash && player.canMidDash)){
-      player.vx = player.dir * DASH_V;
-      if(!player.onGround) player.canMidDash=false;
-      player.dashTimer = 0.12;
-    }
-  }
-  player.dashTimer = Math.max(0, player.dashTimer - dt);
+// collide with swords
+const blades = player.swords;
+let hit = false;
+for(let k=0;k<blades;k++){
+const a = player.angle + (k*(Math.PI*2/blades));
+const bx = player.x + Math.cos(a)*player.orbitR;
+const by = player.y + Math.sin(a)*player.orbitR;
+if(Math.hypot(e.x-bx, e.y-by) < e.r + 18*DPR){
+e.hp -= 1;
+hit = true;
+addSpark(e.x,e.y,'#aef');
+}
+}
+if(hit && Math.random()<0.12) e.fire=true;
 
-  // apply move
-  player.x += player.vx*dt;
-  player.y += player.vy*dt;
-
-  // ground collision
-  const col = groundCollide(player.x, player.y, player.w, player.h);
-  if(col.hit){
-    player.y = col.y;
-    if(player.vy>0) player.onGround=true;
-    player.vy=0;
-  } else player.onGround=false;
-
-  // attacks
-  if(wantSword()){ player.attackTimer = 0.18; setFace('attack', .22); }
-  player.attackTimer = Math.max(0, player.attackTimer - dt);
-
-  // laser / burst
-  if(wantLaser()){
-    if(player.upgrades.burst) startCharge(); else fireLaser();
-  } else {
-    if(player.upgrades.burst && player.charge>0) releaseCharge();
-  }
-  player.laserCD = Math.max(0, player.laserCD - dt);
-
-  // vision
-  if(player.upgrades.vision && wantInteract()) player.visionTimer = 5.0;
-  player.visionTimer = Math.max(0, player.visionTimer - dt);
-
-  // shield
-  if(player.upgrades.shield && wantShield() && player.shieldTimer<=0) player.shieldTimer = 2.0;
-  player.shieldTimer = Math.max(0, player.shieldTimer - dt);
-
-  // shots
-  for(let i=shots.length-1;i>=0;i--){
-    const s = shots[i];
-    s.x += s.vx*dt; s.y += s.vy*dt; s.age += dt;
-    if(s.type==='laser'){
-      const floor = terrainY(s.x) - 10;
-      if(s.y+4 > floor){ shots.splice(i,1); continue; }
-    }
-    if(s.age>s.life){ shots.splice(i,1); continue; }
-  }
-
-  // shrine interaction + captions
-  for(const sh of shrines){
-    sh.pulse += dt;
-    const close = Math.abs(sh.x-player.x)<40 && Math.abs((player.y-10)-sh.y)<50;
-    if(close && !sh.purified && wantInteract()){
-      sh.purified = true;
-      let icon='⚔️', txt='New Ability Unlocked: ';
-      if(sh.kind==='dash'){ player.upgrades.dash=true; document.getElementById('abDash').classList.remove('lock'); txt+='Light Dash'; }
-      if(sh.kind==='burst'){ player.upgrades.burst=true; document.getElementById('abBurst').classList.remove('lock'); txt+='Solar Burst'; }
-      if(sh.kind==='vision'){ player.upgrades.vision=true; document.getElementById('abVision').classList.remove('lock'); icon='✨'; txt+='Aether Vision'; }
-      if(sh.kind==='shield'){ player.upgrades.shield=true; document.getElementById('abShield').classList.remove('lock'); icon='🛡️'; txt+='Radiant Shield'; }
-      levelFlash = 0.8; showCaption(icon, txt);
-    }
-  }
-
-  // enemies
-  for(let i=enemies.length-1;i>=0;i--){
-    const e = enemies[i];
-    enemyAI(e, dt);
-    e.hit = Math.max(0, e.hit - dt);
-    // shots hit
-    for(let k=shots.length-1;k>=0;k--){
-      const s = shots[k];
-      const hit = (Math.abs(e.x-s.x)< (s.type==='burst'?32:36)) && (Math.abs(e.y-s.y)< (s.type==='burst'?26:28));
-      if(hit){
-        e.hp -= s.dmg; e.hit=0.12; shots.splice(k,1);
-        if(e.hp<=0){ addXP(rand(10,18)); enemies.splice(i,1); }
-        break;
-      }
-    }
-    // melee
-    if(player.attackTimer>0){
-      const dx = e.x - player.x, dy = e.y - player.y;
-      if(Math.abs(dy)<36 && Math.abs(dx)<42 && Math.sign(dx)===player.dir){
-        e.hp -= 16; e.hit=0.1; e.vx += player.dir*240;
-        if(e.hp<=0){ addXP(rand(10,18)); enemies.splice(i,1); }
-      }
-    }
-    // contact damage (shield check)
-    const contact = Math.abs(e.x-player.x)<26 && Math.abs(e.y-player.y)<40;
-    if(contact && player.invul<=0){
-      if(player.shieldTimer>0){ e.vx += (e.x<player.x?-1:1)*180; }
-      else { player.hp = Math.max(0, player.hp-10); player.invul = 0.9; setFace('hurt', .35); }
-    }
-  }
-
-  // mini-boss trigger
-  if(warden.alive && !warden.awaken && player.x>warden.x-320){
-    warden.awaken = true; showCaption('⚔️','The Shadow Wraith descends…');
-  }
-  if(warden.alive && warden.awaken){
-    wardenAI(warden, dt);
-    // boss vs shots
-    for(let i=shots.length-1;i>=0;i--){
-      const s = shots[i];
-      if(Math.abs(s.x-warden.x)<40 && Math.abs(s.y-warden.y)<60){
-        warden.hp -= s.dmg*0.7; warden.hit=0.12; shots.splice(i,1);
-        if(warden.hp<=0){ warden.alive=false; showCaption('✨','Heartfire Rekindled!'); addXP(120); }
-      }
-    }
-    // boss contact
-    if(Math.abs(warden.x-player.x)<34 && Math.abs(warden.y-player.y)<62 && player.invul<=0){
-      if(player.shieldTimer<=0){ player.hp=Math.max(0,player.hp-16); player.invul=1.2; setFace('hurt',.4); }
-    }
-  }
-
-  // invuln
-  player.invul = Math.max(0, player.invul - dt);
-
-  // camera
-  camUpdate(dt, player.x + player.dir*120, player.y - 40);
-
-  // UI
-  document.getElementById('hpfill').style.width = (player.hp/player.maxhp*100)+'%';
-  document.getElementById('xpfill').style.width = (player.xp/player.nextXP*100)+'%';
+// collide with player
+if(dist(e,player) < e.r + player.r){
+if(player.invul<=0){
+player.hp -= 8; player.invul=20;
+addSpark(player.x,player.y,'#ff9');
+if(player.hp<=0){ over=true; break; }
+}
+}
+if(e.hp<=0){
+enemies.splice(i,1);
+score++; hudKills.textContent=score;
+addDrop(e.x,e.y);
+if(++xp >= nextXP){ xp=0; nextXP=Math.floor(nextXP*1.25); levelUp(); }
+}
 }
 
-function enemyAI(e, dt){
-  if(Math.random()<0.002) e.dir*=-1;
-  const speed = e.type==='wolf'? 95 : 62;
-  e.vx = e.dir * speed;
-  e.vy += GRAV*dt;
-  const ny = terrainY(e.x) - 22;
-  e.x += e.vx*dt; e.y += e.vy*dt;
-  if(e.y>ny){ e.y=ny; e.vy=0; }
+// pickups
+for(let i=drops.length-1;i>=0;i--){
+const d=drops[i];
+d.life-=dt;
+if(dist(d,player)<player.r+12*DPR){ drops.splice(i,1); xp++; addSpark(d.x,d.y,'#6f6'); continue; }
+if(d.life<=0) drops.splice(i,1);
 }
 
-/* Mini-boss AI (Shadow Wraith) */
-function wardenAI(b, dt){
-  // floaty drift + phase pulses
-  const targetX = player.x + Math.sin(performance.now()/500)*120;
-  b.x += Math.sign(targetX-b.x)*120*dt;
-  const ground = terrainY(b.x)-40;
-  b.y = ground - 30 - 20*Math.sin(performance.now()/400);
+// sparks
+for(let i=sparks.length-1;i>=0;i--){
+const s=sparks[i]; s.life-=dt; if(s.life<=0) sparks.splice(i,1);
 }
 
-/* =========================================================
-   XP / Leveling
-========================================================= */
-function addXP(v){
-  player.xp += v;
-  if(player.xp >= player.nextXP){
-    player.xp -= player.nextXP;
-    player.lvl++;
-    player.nextXP = Math.round(player.nextXP*1.35);
-    player.maxhp += 5; player.hp = Math.min(player.maxhp, player.hp+12);
-    levelFlash=0.9; document.getElementById('lvl').textContent = 'LVL '+player.lvl;
-    showCaption('✨','Level Up — Power Increased!');
-  }
-}
-let levelFlash = 0;
+player.angle += player.orbitSpeed*dt* (1+0.3*level);
+player.invul = Math.max(0, player.invul-dt);
 
-/* =========================================================
-   Hidden platforms for Aether Vision
-========================================================= */
-function drawHiddenPlatforms(){
-  if(player.visionTimer<=0) return;
-  const w=cv.width,h=cv.height;
-  const startX = cam.x - w/2 - 100, endX = cam.x + w/2 + 100;
-  cx.fillStyle='rgba(120,180,255,.35)';
-  for(let i=0;i<6;i++){
-    const x = (i*420) + 200;
-    if(x<startX||x>endX) continue;
-    const y = terrainY(x) - 120 - 40*Math.sin(i+performance.now()/900);
-    cx.fillRect(x-40 - cam.x + w/2, y - cam.y + h/2, 80,8);
-  }
+hudHP.textContent = Math.max(0, Math.ceil(player.hp));
 }
 
-/* =========================================================
-   Rendering — Hero, Enemies, Boss, Shots, Shrines
-========================================================= */
-function drawHero(t){
-  const w=cv.width,h=cv.height;
-  const px = player.x - cam.x + w/2, py = player.y - cam.y + h/2;
+function drawBackground(){
+// “Grass” tile noise + dirt clearing around player (like the ad)
+const g=ctx.createLinearGradient(0,0,0,H());
+g.addColorStop(0,'#7baa58'); g.addColorStop(1,'#6b9c4e');
+ctx.fillStyle=g; ctx.fillRect(0,0,W(),H());
+// wooden wall at the top
+const wallH = 60*DPR;
+for(let x=0;x<W();x+=24*DPR){
+ctx.fillStyle='#7d4f2a';
+ctx.beginPath(); ctx.roundRect(x,0,22*DPR,wallH,8*DPR); ctx.fill();
+ctx.fillStyle='#4f2f16';
+ctx.fillRect(x+2*DPR, wallH-10*DPR, 18*DPR, 10*DPR);
+}
+// dirt clearing
+ctx.save();
+ctx.globalCompositeOperation='destination-out';
+ctx.filter='blur(20px)';
+ctx.beginPath(); ctx.arc(player.x, player.y, 140*DPR, 0, Math.PI*2); ctx.fill();
+ctx.restore();
+// path sand color
+ctx.globalCompositeOperation='source-over';
+ctx.fillStyle='#d0b089';
+ctx.beginPath(); ctx.arc(player.x, player.y, 135*DPR, 0, Math.PI*2); ctx.fill();
 
-  // shadow
-  cx.fillStyle='rgba(0,0,0,.35)';
-  cx.beginPath(); cx.ellipse(px,py+player.h/2-4, 26,10, 0,0,Math.PI*2); cx.fill();
-
-  // cape physics
-  const anchor = { x: px - player.dir*6, y: py-16 };
-  const wind = 60 * (player.vx/360), g = 900;
-  for(let i=0;i<player.cape.length;i++){
-    const p = player.cape[i];
-    if(i===0){
-      const tx = anchor.x - player.dir*14, ty = anchor.y + 4;
-      p.vx += (tx - p.x)*20*0.016 + wind*0.016;
-      p.vy += (ty - p.y)*20*0.016 + g*0.016;
-    } else {
-      p.vy += g*0.016; p.vx += wind*0.01;
-    }
-    p.vx *= 0.92; p.vy *= 0.92; p.x += p.vx; p.y += p.vy;
-    const prev = i===0? anchor : player.cape[i-1];
-    const dx = p.x-prev.x, dy=p.y-prev.y, d=Math.hypot(dx,dy)||1, rest=20, off=(d-rest)/d;
-    p.x -= dx*off*0.5; p.y -= dy*off*0.5;
-  }
-  if(player.cape[0].x===0){ for(const p of player.cape){ p.x=anchor.x-12; p.y=anchor.y+8; } }
-
-  // cape draw (red with gold trim)
-  cx.save(); cx.beginPath();
-  cx.moveTo(anchor.x, anchor.y);
-  cx.quadraticCurveTo(player.cape[0].x,player.cape[0].y, player.cape[1].x,player.cape[1].y);
-  const grad = cx.createLinearGradient(anchor.x,anchor.y, player.cape[1].x,player.cape[1].y);
-  grad.addColorStop(0,'#b01724'); grad.addColorStop(1,'#ff606b');
-  cx.strokeStyle='#e7c766'; cx.lineWidth=3; cx.fillStyle=grad; cx.fill(); cx.stroke(); cx.restore();
-
-  // body armor (red-gold)
-  const body = cx.createLinearGradient(px-14,py-18, px+14,py+22);
-  body.addColorStop(0,'#ff606b'); body.addColorStop(1,'#b01724');
-  cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24,32,46,12); cx.fill();
-
-  // shoulders (gold)
-  cx.fillStyle='#e7c766';
-  cx.beginPath(); cx.roundRect(px-20,py-24,14,12,6); cx.fill();
-  cx.beginPath(); cx.roundRect(px+6,py-24,14,12,6); cx.fill();
-
-  // helm (full) with gold visor glow
-  cx.fillStyle='#651a1e';
-  cx.beginPath(); cx.roundRect(px-14,py-35,28,24,10); cx.fill();
-  cx.fillStyle='#e7c766';
-  cx.fillRect(px-8,py-26,16,3);
-
-  // arms + hands
-  cx.fillStyle='#b01724'; cx.beginPath(); cx.roundRect(px+10,py-16,14,8,4); cx.fill();
-  cx.beginPath(); cx.roundRect(px-24,py-16,14,8,4); cx.fill();
-  cx.fillStyle='#cc9c70';
-  cx.beginPath(); cx.roundRect(px+20,py-12,8,6,3); cx.fill();
-  cx.beginPath(); cx.roundRect(px-26,py-12,8,6,3); cx.fill();
-
-  // sword (golden blade)
-  cx.save(); cx.translate(px + player.dir*20, py-10);
-  const ang = (player.dir===1)? 0 : Math.PI; cx.rotate(ang + Math.sin(t*22)*0.06);
-  const bladeGrad = cx.createLinearGradient(0,0,28,0);
-  bladeGrad.addColorStop(0,'#ffffff'); bladeGrad.addColorStop(1,'#ffe8a9');
-  cx.fillStyle=bladeGrad; cx.beginPath(); cx.roundRect(0,-4,28,8,4); cx.fill();
-  cx.fillStyle='rgba(255,230,140,.75)'; cx.fillRect(0,-4,28,2);
-  cx.fillStyle='#333'; cx.fillRect(-6,-5,6,10);
-  cx.restore();
-
-  // melee arc
-  if(player.attackTimer>0){
-    cx.strokeStyle='rgba(255,248,200,.95)'; cx.lineWidth=4;
-    const a0 = (player.dir===1)? -0.1 : Math.PI-0.1;
-    const swing = Math.sin((1-player.attackTimer)*Math.PI)*0.9;
-    cx.beginPath(); cx.arc(px,py-6, 46, a0 - swing, a0 + swing); cx.stroke();
-    cx.strokeStyle='rgba(255,214,120,.8)'; cx.lineWidth=2;
-    cx.beginPath(); cx.arc(px,py-6, 54, a0 - swing*0.8, a0 + swing*0.8); cx.stroke();
-  }
-
-  // shield aura
-  if(player.shieldTimer>0){
-    cx.strokeStyle='rgba(200,255,200,.75)'; cx.lineWidth=3;
-    cx.beginPath(); cx.arc(px,py-10, 36, 0, Math.PI*2); cx.stroke();
-  }
-
-  if(player.invul>0){
-    cx.fillStyle='rgba(255,255,255,.18)';
-    cx.fillRect(px-20,py-40,40,56);
-  }
+// grass edge sparkle
+ctx.strokeStyle='rgba(200,240,255,.65)';
+ctx.lineWidth=3*DPR;
+ctx.beginPath();
+for(let a=0;a<Math.PI*2; a+=0.08){
+const r=136*DPR + Math.sin(tick*0.05+a)*1.5*DPR;
+ctx.lineTo(player.x+Math.cos(a)*r, player.y+Math.sin(a)*r);
+}
+ctx.stroke();
 }
 
-function drawEnemies(t){
-  const w=cv.width,h=cv.height;
-  for(const e of enemies){
-    const px = e.x - cam.x + w/2, py = e.y - cam.y + h/2;
-    cx.fillStyle='rgba(0,0,0,.3)'; cx.beginPath(); cx.ellipse(px,py+18, 18,8,0,0,Math.PI*2); cx.fill();
-    if(e.type==='crawler'){
-      const bob = Math.sin(t*6 + e.x*0.01)*2;
-      const g = cx.createLinearGradient(px-16,py-10, px+16,py+16);
-      g.addColorStop(0,'#9bd0a8'); g.addColorStop(1,'#3e7b4e');
-      cx.fillStyle=g; cx.beginPath(); cx.roundRect(px-18,py-18+bob,36,28,12); cx.fill();
-      cx.fillStyle='#000'; cx.fillRect(px-6,py-10+bob,4,3); cx.fillRect(px+2,py-10+bob,4,3);
-    } else if(e.type==='wolf'){
-      const step = Math.sin(t*8 + e.x*0.01)*3;
-      cx.fillStyle='#7a6a63'; cx.beginPath(); cx.roundRect(px-20,py-14,40,22,8); cx.fill();
-      cx.fillStyle='#504640'; cx.fillRect(px-16,py-14,14,14);
-      cx.fillStyle='#fff'; cx.fillRect(px+8,py-6,4,2);
-      cx.fillStyle='#ff4444'; cx.fillRect(px+12,py-2+step,8,3);
-    } else {
-      const pulse = 0.5+0.5*Math.sin(t*10);
-      cx.fillStyle='#1f5d2a'; cx.beginPath(); cx.roundRect(px-18,py-18,36,36,12); cx.fill();
-      cx.strokeStyle='#2f8d3e'; cx.lineWidth=3;
-      for(let i=0;i<6;i++){ cx.beginPath(); cx.moveTo(px,py); const a=i*(Math.PI*2/6);
-        cx.lineTo(px+Math.cos(a)*20, py+Math.sin(a)*20); cx.stroke(); }
-      cx.fillStyle=`rgba(190,255,120,${0.45+pulse*0.4})`; cx.beginPath(); cx.arc(px,py,6+3*pulse,0,Math.PI*2); cx.fill();
-    }
-    if(e.hit>0){ cx.fillStyle='rgba(255,255,255,.25)'; cx.fillRect(px-22,py-22,44,44); }
-  }
+function drawPlayer(){
+// circle body
+ctx.fillStyle = player.invul>0? 'rgba(255,240,140,.95)':'#b8ccff';
+ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
+// center
+ctx.fillStyle='#2a3b7a'; ctx.beginPath(); ctx.arc(player.x,player.y,6*DPR,0,Math.PI*2); ctx.fill();
+
+// orbiting swords
+for(let k=0;k<player.swords;k++){
+const a = player.angle + (k*(Math.PI*2/player.swords));
+const bx = player.x + Math.cos(a)*player.orbitR;
+const by = player.y + Math.sin(a)*player.orbitR;
+drawSword(bx,by,a+Math.PI/2,true);
+}
 }
 
-function drawWarden(t){
-  if(!warden.alive) return;
-  const w=cv.width,h=cv.height;
-  const px = warden.x - cam.x + w/2, py = warden.y - cam.y + h/2;
-  // shadow
-  cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px,py+30, 32,14,0,0,Math.PI*2); cx.fill();
-  // smoke body with ember cracks
-  const r = 42;
-  const grad = cx.createRadialGradient(px-10,py-20,10, px,py, r);
-  grad.addColorStop(0,'#351319'); grad.addColorStop(1,'#0d0608');
-  cx.fillStyle=grad; cx.beginPath(); cx.roundRect(px-28,py-60,56,96,26); cx.fill();
-  cx.fillStyle='rgba(255,80,60,.14)';
-  for(let i=0;i<8;i++){
-    cx.fillRect(px-6+Math.sin(i*2+t*3)*10, py-40+i*10, 12, 2);
-  }
-  // eyes/visor
-  cx.fillStyle='#ffb36a'; cx.fillRect(px-10,py-28,8,3); cx.fillRect(px+2,py-28,8,3);
-  if(warden.hit>0){ cx.fillStyle='rgba(255,255,255,.2)'; cx.fillRect(px-35,py-68,70,120); }
+function drawEnemies(){
+for(const e of enemies){
+// body
+const c = e.fire ? '#ff8340' : '#c9c6d1';
+ctx.fillStyle=c; ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,Math.PI*2); ctx.fill();
+// belt shimmer
+ctx.strokeStyle='#d9b24d'; ctx.lineWidth=4*DPR;
+ctx.beginPath(); ctx.arc(e.x,e.y,e.r*0.6,0,Math.PI*2); ctx.stroke();
+if(e.fire){
+ctx.fillStyle='rgba(255,120,40,.22)'; ctx.beginPath(); ctx.arc(e.x,e.y,e.r+12*DPR,0,Math.PI*2); ctx.fill();
+}
+}
 }
 
-function drawShots(){
-  const w=cv.width,h=cv.height;
-  for(const s of shots){
-    const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
-    cx.save(); cx.translate(px,py);
-    if(s.type==='burst' && s.rot) cx.rotate(s.rot);
-    else cx.rotate((s.dir===1)?0:Math.PI);
-    const grad = cx.createLinearGradient(-10,0,s.w+6,0);
-    grad.addColorStop(0,'rgba(255,255,255,.95)');
-    grad.addColorStop(0.5,'rgba(255,248,220,.9)');
-    grad.addColorStop(1, s.type==='burst' ? 'rgba(255,214,120,.95)' : 'rgba(255,230,160,.95)');
-    cx.fillStyle=grad;
-    cx.beginPath(); cx.roundRect(0,-s.h/2, s.w, s.h, s.h/2); cx.fill();
-    cx.globalAlpha=0.35; cx.fillStyle='rgba(255,214,120,1)';
-    cx.fillRect(-18,-(s.h/2)*0.6,18,(s.h)*0.6);
-    cx.restore();
-  }
+function drawDrops(){
+for(const d of drops){
+ctx.strokeStyle='rgba(120,220,255,.85)';
+ctx.lineWidth=3*DPR;
+ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,Math.PI*2); ctx.stroke();
+}
 }
 
-function drawShrines(t){
-  const w=cv.width,h=cv.height;
-  for(const s of shrines){
-    const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
-    cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px,py+20,18,8,0,0,Math.PI*2); cx.fill();
-    const grad = cx.createLinearGradient(px-12,py-40, px+12,py+20);
-    if(s.purified){ grad.addColorStop(0,'#d7f0ff'); grad.addColorStop(1,'#64b1ff'); }
-    else { grad.addColorStop(0,'#ffb0b0'); grad.addColorStop(1,'#9b2f2f'); }
-    cx.fillStyle=grad; cx.beginPath(); cx.roundRect(px-12,py-40,24,60,8); cx.fill();
-    cx.fillStyle= s.purified ? 'rgba(255,255,255,.9)':'rgba(255,180,180,.9)';
-    cx.fillRect(px-2,py-28,4,18); cx.fillRect(px-8,py-14,16,4);
-    const a = (Math.sin(s.pulse*2)+1)/2;
-    cx.strokeStyle= s.purified ? `rgba(140,200,255,${0.35+a*0.25})` : `rgba(255,120,120,${0.35+a*0.25})`;
-    cx.lineWidth=3; cx.beginPath(); cx.arc(px,py, 46+6*a, 0, Math.PI*2); cx.stroke();
-    const close = Math.abs(s.x-player.x)<50 && Math.abs(s.y-(player.y-10))<50 && !s.purified;
-    if(close){
-      cx.fillStyle='rgba(255,255,255,.9)'; cx.fillRect(px-18,py-58,36,16);
-      cx.fillStyle='#0b0d10'; cx.font=`${12*DPR}px system-ui`; cx.fillText('Press E', px-14, py-46);
-    }
-  }
+function drawSparks(){
+for(const s of sparks){
+ctx.globalAlpha = s.life/18;
+ctx.fillStyle=s.c;
+ctx.beginPath(); ctx.arc(s.x, s.y, 6*DPR*(2-s.life/18), 0, Math.PI*2); ctx.fill();
+ctx.globalAlpha = 1;
+}
 }
 
-/* =========================================================
-   Post FX, title plate
-========================================================= */
-function postFX(time){
-  const w=cv.width,h=cv.height;
-  const g=cx.createRadialGradient(w/2,h/2, h*.4, w/2,h/2, h*.72);
-  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.55)');
-  cx.fillStyle=g; cx.fillRect(0,0,w,h);
-  if(levelFlash>0){
-    cx.fillStyle=`rgba(255,255,200,${levelFlash*0.4})`; cx.fillRect(0,0,w,h);
-    levelFlash = Math.max(0, levelFlash - 0.02);
-  }
-  cx.fillStyle='rgba(255,255,255,.035)';
-  for(let y=0;y<h;y+=3) cx.fillRect(0,y,w,1);
+let last=performance.now();
+function loop(t){
+const dt = Math.min(5, (t-last)); last=t;
+if(!over){ update(dt); drawBackground(); drawEnemies(); drawDrops(); drawPlayer(); drawSparks(); }
+else{
+drawBackground(); drawEnemies(); drawDrops(); drawPlayer(); drawSparks();
+ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,0,W(),H());
+ctx.fillStyle='#fff'; ctx.textAlign='center';
+ctx.font = `${28*DPR}px system-ui`; ctx.fillText('Game Over', W()/2, H()/2-20*DPR);
+ctx.font = `${18*DPR}px system-ui`; ctx.fillText(`Kills: ${score} • Level: ${level}`, W()/2, H()/2+8*DPR);
+ctx.fillText('Reload to play again', W()/2, H()/2+34*DPR);
 }
-
-/* =========================================================
-   Pause & Intro & Captions
-========================================================= */
-const pauseUI = document.getElementById('pause');
-function togglePause(){ paused=!paused; pauseUI.style.display = paused?'flex':'none'; }
-
-const introEl = document.getElementById('intro');
-const titlePlate = document.getElementById('titlePlate');
-function runIntro(){
-  const l1=document.getElementById('l1'), l2=document.getElementById('l2'), l3=document.getElementById('l3');
-  setTimeout(()=>l1.classList.add('show'), 300);
-  setTimeout(()=>l2.classList.add('show'), 1800);
-  setTimeout(()=>l3.classList.add('show'), 3400);
-  // show title plate briefly before start
-  setTimeout(()=>{ titlePlate.style.display='block'; }, 3800);
+requestAnimationFrame(loop);
 }
-runIntro();
-function beginGame(){
-  if(started) return; started=true;
-  introEl.style.display='none';
-  titlePlate.style.display='block';
-  setTimeout(()=>{ titlePlate.style.display='none'; }, 2200);
-  musicPlay();
-}
-
-/* HUD caption */
-const cap = document.getElementById('caption');
-const capIcon = document.getElementById('capIcon');
-const capText = document.getElementById('capText');
-let capTimer = 0;
-function showCaption(icon, text){
-  capIcon.textContent = icon; capText.textContent = text;
-  cap.style.display='block'; cap.style.opacity=0; capTimer = 3.2;
-}
-
-/* =========================================================
-   Music (chiptune orchestra; base64 tiny placeholders)
-========================================================= */
-let currentTheme = 'main';
-const music = new Audio(); music.loop = true; music.volume = 0.25;
-// ultra-small loop (placeholder). We can swap with longer base64 later.
-music.src = "data:audio/wav;base64,UklGRqQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YWCDAAAAgICAf39/f39/gICAf4CAgH9/f39/f4CAgICAf39/gICAf39/f4CAgICAf4CAgH9/f39/f4CAgICAf39/gICAf39/f4CAgICAf39/gICAf39/f4CAgICAf39/gICA";
-function musicPlay(){ try{ music.play().catch(()=>{}); }catch(e){} }
-
-/* =========================================================
-   Main Loop
-========================================================= */
-function frame(){
-  const now = performance.now()/1000, dt = Math.min(0.033, now-last); last=now;
-  cx.clearRect(0,0,cv.width,cv.height);
-
-  if(!paused && started) update(dt);
-
-  // caption fade
-  if(capTimer>0){ capTimer-=dt; cap.style.opacity = Math.min(1, cap.style.opacity*1 + 0.1); if(capTimer<=0){ cap.style.display='none'; } }
-
-  drawBackground(now);
-  drawGround(now);
-  if(player.visionTimer>0) drawHiddenPlatforms();
-  drawShrines(now);
-  drawEnemies(now);
-  if(warden.awaken && warden.alive) drawWarden(now);
-  drawShots();
-  drawHero(now);
-  postFX(now);
-
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
+requestAnimationFrame(loop);
+})();
 </script>
 </body>
 </html>

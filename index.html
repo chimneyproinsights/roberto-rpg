@@ -3,530 +3,313 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Roberto Fantasy — Single-File Zelda-like (Bigger Maps)</title>
+<title>Roberto Fantasy — Minimal Zelda-like (Boot Test)</title>
 <style>
-  html, body { margin:0; padding:0; background:#0b0c10; color:#eaeaea; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #game { display:flex; justify-content:center; align-items:center; height:100vh; touch-action: manipulation;}
-  .hud { position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.55); padding:8px 10px; border-radius:10px; font-size:14px; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
-  .hud .row { display:flex; gap:10px; flex-wrap:wrap; }
-  .gp  { position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.55); padding:8px 10px; border-radius:10px; font-size:12px; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
-  .gp strong{ color:#ffd54a }
-  .panel{ position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(8,8,10,0.82); padding:12px 14px; border-radius:10px; min-width:340px; max-width:90vw; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.45); }
-  .panel h3{ margin:4px 0 8px; font-size:16px }
-  .btnbar{ margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center }
-  button{ background:#1e88e5; border:none; color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer }
-  button:disabled{ background:#666; cursor:not-allowed }
-  .corner{ position:absolute; bottom:8px; right:10px; opacity:0.65; font-size:12px }
-  .heart{ display:inline-block; width:14px; height:14px; background:#e53935; clip-path: polygon(50% 8%,61% 0,75% 2%,86% 11%,88% 24%,82% 36%,50% 66%,18% 36%,12% 24%,14% 11%,25% 2%,39% 0); margin-right:3px }
-  .heart.empty{ background:#4a1919 }
+  html,body{margin:0;padding:0;background:#0b0c10;color:#eaeaea;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  #game{display:flex;justify-content:center;align-items:center;height:100vh;touch-action:manipulation}
+  .hud{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);padding:8px 10px;border-radius:10px;font-size:14px}
+  .gp{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);padding:8px 10px;border-radius:10px;font-size:12px}
+  .panel{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(8,8,10,.82);padding:12px 14px;border-radius:10px;min-width:300px;max-width:90vw;text-align:center}
+  .btnbar{margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  button{background:#1e88e5;border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .heart{display:inline-block;width:14px;height:14px;background:#e53935;clip-path:polygon(50% 8%,61% 0,75% 2%,86% 11%,88% 24%,82% 36%,50% 66%,18% 36%,12% 24%,14% 11%,25% 2%,39% 0);margin-right:3px}
+  .heart.empty{background:#4a1919}
+  .corner{position:absolute;bottom:8px;right:10px;opacity:.65;font-size:12px}
 </style>
 </head>
 <body>
   <div id="game"></div>
-  <div class="hud" id="hud">
-    <div><strong>Roberto Fantasy — Zelda-like (Single File, Bigger Maps)</strong></div>
-    <div>Move: WASD/Arrows • Attack: J / <em>A</em> • Block: K / <em>B</em> • Dash: L / <em>X</em> • Interact: E / <em>Y</em> • Menu: P / <em>Start</em></div>
-    <div id="hearts"></div>
-    <div id="stats"></div>
+  <div class="hud">
+    <div><strong>Roberto Fantasy — Minimal Boot</strong></div>
+    <div>Move: WASD/Arrows • Attack: J • Block: K • Dash: L • Interact: E • Menu: P</div>
+    <div id="hearts"></div><div id="stats"></div>
   </div>
   <div class="gp" id="gp">Gamepad: <strong>None</strong></div>
   <div class="panel" id="panel" style="display:none;">
-    <h3 id="panelTitle"></h3>
-    <div id="panelText"></div>
-    <div class="btnbar" id="panelBtns"></div>
+    <h3 id="panelTitle"></h3><div id="panelText"></div><div class="btnbar" id="panelBtns"></div>
   </div>
-  <div class="corner">v3.1 — single-file CANVAS (iOS-friendly)</div>
+  <div class="corner">v1.0 (Canvas, iOS-friendly)</div>
 
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.js"></script>
 <script>
-/* ========= Core Data ========= */
-const TIERS={levels:[
-  {level:1,name:'Bronze',multiplier:1.0},
-  {level:2,name:'Iron',multiplier:1.15},
-  {level:3,name:'Steel',multiplier:1.32},
-  {level:4,name:'Mithril',multiplier:1.52},
-  {level:5,name:'Obsidian',multiplier:1.75},
-  {level:6,name:'Dragonbone',multiplier:2.02},
-  {level:7,name:'Gold',multiplier:2.35},
-]};
-function computeItems(t){const S=[],H=[],A=[];for(const x of t.levels){const L=x.level,M=x.multiplier,N=x.name;S.push({level:L,name:`${N} Blade`,attack:Math.round(5*M+(L-1)*2)});H.push({level:L,name:`${N} Shield`,defense:Math.round(2.5*M+(L-1)*1.3)});A.push({level:L,name:`${N} Armor`,attack_bonus:Math.round(1*M+(L-1)*0.5),defense_bonus:Math.round(2*M+(L-1)*1.1)})}return{swords:S,shields:H,armors:A}}
-const ITEMS=computeItems(TIERS);
-const PROGRESSION={chapters:[
-  {id:'c1',name:'Awakening',goal:'Light the Village Forge',unlocks:{maxTier:2}},
-  {id:'c2',name:'Forest of Trials',goal:'Defeat Mosslord',unlocks:{maxTier:3}},
-  {id:'c3',name:'Ember Cavern',goal:'Defeat Cinderwyrm',unlocks:{maxTier:5}},
-  {id:'c4',name:'Citadel of Gold',goal:'Defeat Gilded Warden',unlocks:{maxTier:7}},
-],economy:{currency:'Shards'}};
+/* ===== Utility ===== */
+function rand(min,max){return Math.floor(min+Math.random()*(max-min+1));}
 
-/* ========= Systems ========= */
+/* ===== Items/Progress ===== */
+const TIERS=[{n:'Bronze',m:1},{n:'Iron',m:1.15},{n:'Steel',m:1.32},{n:'Mithril',m:1.52},{n:'Obsidian',m:1.75},{n:'Dragonbone',m:2.02},{n:'Gold',m:2.35}];
+function gearStats(lvl){const t=TIERS[Math.max(0,Math.min(6,lvl-1))];return{
+  sword:{name:t.n+' Blade', atk:Math.round(5*t.m+(lvl-1)*2)},
+  shield:{name:t.n+' Shield', def:Math.round(2.5*t.m+(lvl-1)*1.3)},
+  armor:{name:t.n+' Armor', atkB:Math.round(1*t.m+(lvl-1)*0.5), defB:Math.round(2*t.m+(lvl-1)*1.1)},
+};}
 class Equipment{
-  constructor(){this.levels={sword:1,shield:1,armor:1};this.shards=0;this.keys=0;this.chapterIndex=0;}
-  maxTier(){return PROGRESSION.chapters[this.chapterIndex]?.unlocks?.maxTier||1}
-  canUp(s){return this.levels[s]+1<=Math.min(7,this.maxTier())}
-  cost(s){return 10*(this.levels[s]+1)}
-  tryUp(s){ if(!this.canUp(s))return false; if(this.shards<this.cost(s))return false; this.shards-=this.cost(s); this.levels[s]++; save(); return true; }
-  atk(){ const s=ITEMS.swords.find(x=>x.level===this.levels.sword), a=ITEMS.armors.find(x=>x.level===this.levels.armor); return Math.round((s?.attack||1)+(a?.attack_bonus||0)); }
-  def(){ const h=ITEMS.shields.find(x=>x.level===this.levels.shield), a=ITEMS.armors.find(x=>x.level===this.levels.armor); return Math.round((h?.defense||0)+(a?.defense_bonus||0)); }
-  names(){ return {
-    sword:ITEMS.swords.find(x=>x.level===this.levels.sword)?.name||'Sword Lv1',
-    shield:ITEMS.shields.find(x=>x.level===this.levels.shield)?.name||'Shield Lv1',
-    armor:ITEMS.armors.find(x=>x.level===this.levels.armor)?.name||'Armor Lv1',
-  }; }
+  constructor(){this.sword=1;this.shield=1;this.armor=1;this.shards=0;this.keys=0;this.chapter=0;}
+  atk(){const s=gearStats(this.sword).sword.atk, a=gearStats(this.armor).armor.atkB; return s+a;}
+  def(){const h=gearStats(this.shield).shield.def, a=gearStats(this.armor).armor.defB; return h+a;}
+  cost(part){return 10*(this[part]+1)}
+  canUp(part){return this[part]<7}
+  up(part){if(!this.canUp(part))return false;const c=this.cost(part);if(this.shards<c)return false;this.shards-=c;this[part]++;save();return true;}
+  names(){return{
+    sword:gearStats(this.sword).sword.name,
+    shield:gearStats(this.shield).shield.name,
+    armor:gearStats(this.armor).armor.name
+  }}
 }
-const EQUIP = new Equipment();
-let SAVE = { hearts:6, maxHearts:6, stamina:100, maxStamina:100, map:'overworld', spawn:{x:200,y:300}, quests:{} };
-function save(){ localStorage.setItem('rf_single', JSON.stringify({equip:EQUIP, save:SAVE})); }
-(function load(){ try{ const raw=localStorage.getItem('rf_single'); if(raw){ const d=JSON.parse(raw); Object.assign(EQUIP, d.equip||{}); Object.assign(SAVE, d.save||SAVE);} }catch(e){} })();
+const EQUIP=new Equipment();
+let SAVE={hearts:6,maxHearts:6,stamina:100,maxStamina:100,map:'overworld',spawn:{x:200,y:300}};
+function save(){localStorage.setItem('rf_min',JSON.stringify({equip:EQUIP,save:SAVE}));}
+(function load(){try{const raw=localStorage.getItem('rf_min');if(raw){const d=JSON.parse(raw);Object.assign(EQUIP,d.equip||{});Object.assign(SAVE,d.save||SAVE)}}catch(e){}})();
 
-/* ========= Gamepad ========= */
-const GP={connected:false,index:null,name:'None',axes:[0,0,0,0],buttons:[],
-  update(){ const pads=navigator.getGamepads?navigator.getGamepads():[]; const gp=(pads&&pads[this.index])||[...pads].find(p=>p); if(!gp){this.connected=false;this.name='None';return;} this.connected=true; this.index=gp.index; this.name=gp.id||'Gamepad'; this.axes=gp.axes?gp.axes.slice(0,4):[0,0,0,0]; this.buttons=gp.buttons?gp.buttons.map(b=>b.pressed):[]; }
-};
-addEventListener('gamepadconnected',e=>{GP.connected=true;GP.index=e.gamepad.index;GP.name=e.gamepad.id;renderGP();});
-addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.index=null;GP.name='None';renderGP();});
-function renderGP(){ document.getElementById('gp').innerHTML='Gamepad: <strong>'+(GP.connected?GP.name:'None')+'</strong>'; }
+/* ===== Gamepad ===== */
+const GP={connected:false,name:'None',axes:[0,0],buttons:[],update(){const pads=navigator.getGamepads?navigator.getGamepads():[];const gp=[...pads].find(p=>p);if(!gp){this.connected=false;this.name='None';return;}this.connected=true;this.name=gp.id||'Gamepad';this.axes=gp.axes;this.buttons=gp.buttons.map(b=>b.pressed);}};
+addEventListener('gamepadconnected',e=>{GP.connected=true;GP.name=e.gamepad.id;document.getElementById('gp').innerHTML='Gamepad: <strong>'+GP.name+'</strong>';});
+addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.name='None';document.getElementById('gp').innerHTML='Gamepad: <strong>None</strong>';});
 
-/* ========= CanvasTexture Art ========= */
-function makeTex(scene,key,w,h,paint){ const t=scene.textures.createCanvas(key,w,h); const ctx=t.getContext(); paint(ctx,w,h); t.refresh(); }
-function dot(ctx){ ctx.fillRect((Math.random()*32)|0,(Math.random()*32)|0,1,1); }
-function rand(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+/* ===== Quick Canvas Textures ===== */
+function makeTex(scene,key,w,h,paint){const t=scene.textures.createCanvas(key,w,h);const c=t.getContext();paint(c,w,h);t.refresh();}
+function dots(c,n,colors){for(let i=0;i<n;i++){c.fillStyle=colors[i%colors.length];c.fillRect((Math.random()*32)|0,(Math.random()*32)|0,1,1);}}
+/* Tiles: 0 grass,1 path,2 water,3 tree,4 portal,5 wall,6 floor,7 door */
+function tileKey(id){return id===0?'grass':id===1?'path':id===2?'water':id===3?'tree':id===4?'portal':id===5?'wall':id===6?'floor':id===7?'door':'grass'}
+function solid(id){return (id===2||id===3||id===5||id===7)}
 
-/* ========= Boot ========= */
+/* ===== Boot Scene ===== */
 class Boot extends Phaser.Scene{
-  constructor(){ super('Boot'); }
+  constructor(){super('Boot');}
   preload(){
-    // Player
-    makeTex(this,'pl',28,28,(c,w,h)=>{ c.fillStyle='#1e88e5';c.fillRect(0,0,w,h); c.fillStyle='#0d47a1';c.fillRect(2,2,w-4,h-4); c.fillStyle='#90caf9';c.fillRect(6,8,w-12,6); c.fillStyle='#263238';c.fillRect(11,18,6,6); });
-    // Enemies
-    makeTex(this,'slime',26,22,(c,w,h)=>{ c.fillStyle='#8bc34a';c.fillRect(0,2,w,h-2); c.fillStyle='#558b2f';c.fillRect(2,4,w-4,h-6); c.fillStyle='#c5e1a5';c.fillRect(6,6,w-12,6);} );
-    makeTex(this,'mosslord',42,42,(c,w,h)=>{ c.fillStyle='#2e7d32';c.fillRect(0,0,w,h); c.fillStyle='#1b5e20';c.fillRect(3,3,w-6,h-6); c.fillStyle='#a5d6a7';c.fillRect(10,10,w-20,12);} );
-    makeTex(this,'cinderwyrm',46,46,(c,w,h)=>{ c.fillStyle='#ef6c00';c.fillRect(0,0,w,h); c.fillStyle='#e65100';c.fillRect(3,3,w-6,h-6); c.fillStyle='#ffe0b2';c.fillRect(12,14,w-24,8);} );
-    makeTex(this,'warden',46,46,(c,w,h)=>{ c.fillStyle='#ffd54a';c.fillRect(0,0,w,h); c.fillStyle='#b28900';c.fillRect(3,3,w-6,h-6); c.fillStyle='#fff59d';c.fillRect(12,14,w-24,8);} );
-    // Tiles
-    makeTex(this,'grass',32,32,(c,w,h)=>{ c.fillStyle='#2e7d32';c.fillRect(0,0,w,h); for(let i=0;i<60;i++){ c.fillStyle=(i%3?'#388e3c':'#1b5e20'); dot(c);} });
-    makeTex(this,'path',32,32,(c,w,h)=>{ c.fillStyle='#8d6e63';c.fillRect(0,0,w,h); for(let i=0;i<50;i++){ c.fillStyle=(i%2?'#6d4c41':'#a1887f'); dot(c);} });
-    makeTex(this,'water',32,32,(c,w,h)=>{ c.fillStyle='#1565c0';c.fillRect(0,0,w,h); for(let i=0;i<70;i++){ c.fillStyle=(i%2?'#42a5f5':'#0d47a1'); dot(c);} });
-    makeTex(this,'tree',32,40,(c,w,h)=>{ c.fillStyle='#1b5e20';c.fillRect(0,0,w,28); c.fillStyle='#2e7d32';c.fillRect(2,2,w-4,24); c.fillStyle='#4e342e';c.fillRect(12,28,8,12);} );
-    makeTex(this,'wall',32,32,(c,w,h)=>{ c.fillStyle='#37474f';c.fillRect(0,0,w,h); for(let i=0;i<60;i++){ c.fillStyle=(i%2?'#263238':'#455a64'); dot(c);} });
-    makeTex(this,'floor',32,32,(c,w,h)=>{ c.fillStyle='#616161';c.fillRect(0,0,w,h); for(let i=0;i<45;i++){ c.fillStyle=(i%2?'#757575':'#424242'); dot(c);} });
-    makeTex(this,'portal',32,32,(c,w,h)=>{ c.fillStyle='#6a1b9a';c.fillRect(0,0,w,h); c.fillStyle='#ab47bc';c.fillRect(4,4,w-8,h-8);} );
-    makeTex(this,'forge',36,36,(c,w,h)=>{ c.fillStyle='#f57c00';c.fillRect(0,0,w,h); c.fillStyle='#ffb74d';c.fillRect(6,6,w-12,h-12);} );
-    makeTex(this,'npc',28,28,(c,w,h)=>{ c.fillStyle='#7e57c2';c.fillRect(0,0,w,h); c.fillStyle='#b39ddb';c.fillRect(4,6,w-8,8);} );
-    makeTex(this,'chest',28,20,(c,w,h)=>{ c.fillStyle='#6d4c41';c.fillRect(0,0,w,h); c.fillStyle:'#a1887f';c.fillRect(2,2,w-4,h-6); c.fillStyle='#ffeb3b';c.fillRect(12,8,4,4);} );
-    makeTex(this,'door',32,32,(c,w,h)=>{ c.fillStyle='#3e2723';c.fillRect(0,0,w,h); c.fillStyle='#5d4037';c.fillRect(2,2,w-4,h-4);} );
-    makeTex(this,'key',16,16,(c,w,h)=>{ c.fillStyle='#ffd54a';c.fillRect(4,4,8,8); c.fillStyle='#b28900';c.fillRect(2,6,4,4);} );
-    makeTex(this,'heart',14,14,(c,w,h)=>{ c.fillStyle='#e53935';c.beginPath(); c.arc(5,5,4,0,Math.PI*2); c.arc(9,5,4,0,Math.PI*2); c.fill(); c.fillRect(3,7,8,6);} );
+    makeTex(this,'pl',28,28,(c,w,h)=>{c.fillStyle='#1e88e5';c.fillRect(0,0,w,h);c.fillStyle='#0d47a1';c.fillRect(2,2,w-4,h-4);});
+    makeTex(this,'slime',26,22,(c,w,h)=>{c.fillStyle='#8bc34a';c.fillRect(0,2,w,h-2);});
+    makeTex(this,'boss',46,46,(c,w,h)=>{c.fillStyle='#ffd54a';c.fillRect(0,0,w,h);c.fillStyle='#b28900';c.fillRect(3,3,w-6,h-6);});
+    makeTex(this,'grass',32,32,(c,w,h)=>{c.fillStyle='#2e7d32';c.fillRect(0,0,w,h);dots(c,60,['#388e3c','#1b5e20']);});
+    makeTex(this,'path',32,32,(c,w,h)=>{c.fillStyle='#8d6e63';c.fillRect(0,0,w,h);dots(c,50,['#6d4c41','#a1887f']);});
+    makeTex(this,'water',32,32,(c,w,h)=>{c.fillStyle='#1565c0';c.fillRect(0,0,w,h);dots(c,70,['#42a5f5','#0d47a1']);});
+    makeTex(this,'tree',32,40,(c,w,h)=>{c.fillStyle='#1b5e20';c.fillRect(0,0,w,28);c.fillStyle='#4e342e';c.fillRect(12,28,8,12);});
+    makeTex(this,'wall',32,32,(c,w,h)=>{c.fillStyle='#37474f';c.fillRect(0,0,w,h);dots(c,50,['#263238','#455a64']);});
+    makeTex(this,'floor',32,32,(c,w,h)=>{c.fillStyle='#616161';c.fillRect(0,0,w,h);dots(c,40,['#757575','#424242']);});
+    makeTex(this,'portal',32,32,(c,w,h)=>{c.fillStyle='#6a1b9a';c.fillRect(0,0,w,h);c.fillStyle:'#ab47bc';c.fillRect(4,4,w-8,h-8);});
+    makeTex(this,'forge',36,36,(c,w,h)=>{c.fillStyle='#f57c00';c.fillRect(0,0,w,h);c.fillStyle('#ffb74d');c.fillRect(6,6,w-12,h-12);});
+    makeTex(this,'npc',28,28,(c,w,h)=>{c.fillStyle='#7e57c2';c.fillRect(0,0,w,h);});
+    makeTex(this,'chest',28,20,(c,w,h)=>{c.fillStyle='#6d4c41';c.fillRect(0,0,w,h);c.fillStyle='#ffeb3b';c.fillRect(12,8,4,4);});
+    makeTex(this,'door',32,32,(c,w,h)=>{c.fillStyle='#3e2723';c.fillRect(0,0,w,h);});
+    makeTex(this,'heart',14,14,(c,w,h)=>{c.fillStyle='#e53935';c.beginPath();c.arc(5,5,4,0,Math.PI*2);c.arc(9,5,4,0,Math.PI*2);c.fill();c.fillRect(3,7,8,6);});
   }
-  create(){ this.scene.start('World',{mapId:SAVE.map, spawn:SAVE.spawn}); }
+  create(){this.scene.start('World',{mapId:SAVE.map,spawn:SAVE.spawn});}
 }
 
-/* ========= Map Generators (Bigger) ========= */
-// codes: 0 grass/floor, 1 path, 2 water, 3 tree, 4 portal, 5 wall, 6 floor (dungeon), 7 door
-function blank(r,c,fill=0){const t=[];for(let y=0;y<r;y++){const row=new Array(c).fill(fill);t.push(row);}return t;}
-function boxWalls(t,val){const r=t.length,c=t[0].length;for(let x=0;x<c;x++){t[0][x]=val;t[r-1][x]=val}for(let y=0;y<r;y++){t[y][0]=val;t[y][c-1]=val}return t;}
-function carvePath(t,points,code=1){
-  for(let i=0;i<points.length-1;i++){
-    let [x1,y1]=points[i], [x2,y2]=points[i+1];
-    while(x1!==x2||y1!==y2){ t[y1][x1]=code; if(x1<x2)x1++; else if(x1>x2)x1--; else if(y1<y2)y1++; else if(y1>y2)y1--; }
-    t[y2][x2]=code;
-  }
-}
-function sprinkle(t,code,count,avoid=3){
-  const r=t.length,c=t[0].length;
-  let placed=0,safety=5000;
-  while(placed<count && safety--){
-    const x=rand(1,c-2), y=rand(1,r-2);
-    if(t[y][x]!==avoid){ t[y][x]=code; placed++; }
-  }
-}
+/* ===== Maps (simple, but bigger than tiny demo) ===== */
 const MAPS={
-  overworld:(()=>{
-    const tile=32, cols=64, rows=40;
-    const data=blank(rows,cols,0);
-    // borders trees
-    boxWalls(data,3);
-    // winding river
-    let river=[]; let x=10,y=5;
-    for(let i=0;i<rows-10;i++){ river.push([x,y+i]); if(Math.random()<0.4) x+= rand(-1,1); x=Math.max(2,Math.min(cols-3,x)); }
-    for(const [rx,ry] of river){ for(let dx=-1;dx<=1;dx++){ for(let dy=-1;dy<=1;dy++){ data[ry+dy]?.[rx+dx]=2; } } }
-    // main paths
-    carvePath(data,[[6,20],[30,20],[45,20],[58,18]]);
-    carvePath(data,[[30,8],[30,20],[30,32]]);
-    // scatter trees
-    sprinkle(data,3,600,2);
-    // portals near east
-    data[18][58]=4; // to forest
-    data[22][58]=4; // to cavern
-    data[20][6]=1; // path near spawn
-
-    const portals=[ {x:58,y:18,to:'forest',toPos:{x:64,y:64}}, {x:58,y:22,to:'cavern',toPos:{x:64,y:64}}, {x:6,y:20,to:'gold',toPos:{x:64,y:64}} ];
-    const forge={x:6*tile+16,y:20*tile+16};
-    const npc={x:12*tile+16,y:20*tile+16};
-    const chests=[{x:20*tile+16,y:12*tile+16, loot:'keys', amount:1},{x:26*tile+16,y:26*tile+16, loot:'shards', amount:40},{x:46*tile+16,y:10*tile+16, loot:'shards', amount:35}];
-    const doors=[];
-    const enemies=[
-      {x:22*tile+16,y:18*tile+16},{x:24*tile+16,y:22*tile+16},{x:30*tile+16,y:24*tile+16},
-      {x:40*tile+16,y:20*tile+16},{x:44*tile+16,y:16*tile+16},{x:50*tile+16,y:28*tile+16}
-    ];
-    return {tile,cols,rows,data,portals,forge,npc,chests,doors,enemies};
-  })(),
-  forest:(()=>{
-    const tile=32, cols=44, rows=30;
-    const data=blank(rows,cols,0);
-    boxWalls(data,3);
-    // interior walls forming rooms/corridors
-    for(let x=4;x<cols-4;x++) data[8][x]=5;
-    for(let y=9;y<rows-4;y++) data[y][20]=5;
-    // locked door in the center
-    data[9][20]=7;
-    // path/clearings
-    carvePath(data,[[2,2],[10,2],[10,6],[20,6],[20,9]]);
-    // Back portal
-    data[2][2]=4;
-    // Boss portal far SE
-    data[rows-3][cols-3]=4;
-
-    const portals=[{x:cols-3,y:rows-3,to:'mossboss',toPos:{x:320,y:240}}, {x:2,y:2,to:'overworld',toPos:{x:58*32+16,y:18*32+16}}];
-    const chests=[{x:8*tile+16,y:5*tile+16,loot:'shards',amount:40},{x:28*tile+16,y:20*tile+16,loot:'keys',amount:1},{x:34*tile+16,y:24*tile+16,loot:'shards',amount:30}];
-    const doors=[{tx:20,ty:9,mapTo:'open'}];
-    const enemies=[{x:12*tile+16,y:12*tile+16},{x:18*tile+16,y:14*tile+16},{x:26*tile+16,y:10*tile+16},{x:30*tile+16,y:18*tile+16},{x:36*tile+16,y:22*tile+16}];
-    return {tile,cols,rows,data,portals,forge:null,npc:null,chests,doors,enemies};
-  })(),
-  cavern:(()=>{
-    const tile=32, cols=44, rows=30;
-    const data=blank(rows,cols,6); // stone floor
-    boxWalls(data,5);
-    // halls
-    for(let x=3;x<cols-3;x++) data[6][x]=5;
-    for(let x=3;x<cols-3;x++) data[14][x]=5;
-    for(let y=6;y<rows-3;y++) data[y][12]=5;
-    // locked door
-    data[10][12]=7;
-    // portals
-    data[2][2]=4; // back
-    data[rows-3][cols-3]=4; // boss
-
-    const portals=[{x:cols-3,y:rows-3,to:'cinderboss',toPos:{x:320,y:240}}, {x:2,y:2,to:'overworld',toPos:{x:58*32+16,y:22*32+16}}];
-    const chests=[{x:6*tile+16,y:5*tile+16,loot:'shards',amount:60},{x:30*tile+16,y:8*tile+16,loot:'heart',amount:1}];
-    const doors=[{tx:12,ty:10,mapTo:'open'}];
-    const enemies=[{x:16*tile+16,y:8*tile+16},{x:24*tile+16,y:12*tile+16},{x:28*tile+16,y:18*tile+16},{x:34*tile+16,y:20*tile+16},{x:14*tile+16,y:22*tile+16}];
-    return {tile,cols,rows,data,portals,forge:null,npc:null,chests,doors,enemies};
-  })(),
-  gold:(()=>{
-    const tile=32, cols=40, rows=28;
-    const data=blank(rows,cols,6);
-    boxWalls(data,5);
-    // corridors cross
-    for(let x=2;x<cols-2;x++) data[8][x]=5;
-    for(let y=2;y<rows-2;y++) data[y][18]=5;
-    data[8][18]=7; // door on the cross
-    // portals
-    data[2][2]=4; // back to overworld (west)
-    data[rows-3][cols-3]=4; // boss
-
-    const portals=[{x:cols-3,y:rows-3,to:'wardenboss',toPos:{x:320,y:240}}, {x:2,y:2,to:'overworld',toPos:{x:9*32+16,y:20*32+16}}];
-    const chests=[{x:6*tile+16,y:12*tile+16,loot:'shards',amount:90},{x:30*tile+16,y:12*tile+16,loot:'keys',amount:1}];
-    const doors=[{tx:18,ty:8,mapTo:'open'}];
-    const enemies=[{x:12*tile+16,y:8*tile+16},{x:22*tile+16,y:6*tile+16},{x:16*tile+16,y:18*tile+16},{x:26*tile+16,y:20*tile+16},{x:32*tile+16,y:14*tile+16}];
-    return {tile,cols,rows,data,portals,forge:null,npc:null,chests,doors,enemies};
-  })(),
-  // Boss arenas (simple, roomy)
-  mossboss:{tile:32, cols:28, rows:20, boss:'mosslord',
-    data:(()=>{const r=20,c=28,t=blank(r,c,0); boxWalls(t,3); t[r-3][2]=4; return t;})(),
-    portals:[{x:2,y:17,to:'forest',toPos:{x:64,y:64}}], chests:[], doors:[], enemies:[]
+  overworld:{tile:32,cols:40,rows:26,
+    data:(()=>{const r=26,c=40,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(0));}
+      for(let x=0;x<c;x++){t[0][x]=3;t[r-1][x]=3}for(let y=0;y<r;y++){t[y][0]=3;t[y][c-1]=3}
+      for(let x=4;x<36;x++)t[13][x]=1;for(let y=6;y<20;y++)t[y][8]=1;
+      for(let y=3;y<9;y++)for(let x=26;x<34;x++)t[y][x]=2;
+      t[13][35]=4; t[10][35]=4; // portals east
+      return t;})(),
+    portals:[{x:35,y:13,to:'dungeon',toPos:{x:96,y:96}},{x:35,y:10,to:'bossroom',toPos:{x:320,y:192}}],
+    forge:{x:6*32+16,y:13*32+16}, npc:{x:10*32+16,y:13*32+16},
+    chests:[{x:14*32+16,y:15*32+16,loot:'keys',amount:1},{x:18*32+16,y:9*32+16,loot:'shards',amount:25}],
+    doors:[], enemies:[{x:22*32+16,y:12*32+16},{x:18*32+16,y:8*32+16},{x:24*32+16,y:6*32+16}]
   },
-  cinderboss:{tile:32, cols:28, rows:20, boss:'cinderwyrm',
-    data:(()=>{const r=20,c=28,t=blank(r,c,6); boxWalls(t,5); t[r-3][2]=4; for(let y=8;y<=9;y++)for(let x=12;x<=15;x++)t[y][x]=1; return t;})(),
-    portals:[{x:2,y:17,to:'cavern',toPos:{x:64,y:64}}], chests:[], doors:[], enemies:[]
+  dungeon:{tile:32,cols:28,rows:18,
+    data:(()=>{const r=18,c=28,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(6));}
+      for(let x=0;x<c;x++){t[0][x]=5;t[r-1][x]=5}for(let y=0;y<r;y++){t[y][0]=5;t[y][c-1]=5}
+      for(let x=2;x<c-2;x++)t[6][x]=5; for(let y=6;y<r-2;y++)t[y][12]=5; t[6][12]=7; // locked door
+      t[1][1]=4; // back
+      return t;})(),
+    portals:[{x:1,y:1,to:'overworld',toPos:{x:35*32+16,y:13*32+16}}],
+    forge:null,npc:null,
+    chests:[{x:6*32+16,y:5*32+16,loot:'shards',amount:40},{x:18*32+16,y:10*32+16,loot:'keys',amount:1}],
+    doors:[{tx:12,ty:6,mapTo:'open'}],
+    enemies:[{x:8*32+16,y:10*32+16},{x:14*32+16,y:3*32+16},{x:6*32+16,y:12*32+16},{x:18*32+16,y:6*32+16}]
   },
-  wardenboss:{tile:32, cols:28, rows:20, boss:'warden',
-    data:(()=>{const r=20,c=28,t=blank(r,c,6); boxWalls(t,5); t[r-3][2]=4; for(let y=8;y<=9;y++)for(let x=12;x<=15;x++)t[y][x]=1; return t;})(),
-    portals:[{x:2,y:17,to:'gold',toPos:{x:64,y:64}}], chests:[], doors:[], enemies:[]
+  bossroom:{tile:32,cols:24,rows:16,boss:'boss',
+    data:(()=>{const r=16,c=24,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(6));}
+      for(let x=0;x<c;x++){t[0][x]=5;t[r-1][x]=5}for(let y=0;y<r;y++){t[y][0]=5;t[y][c-1]=5}
+      t[14][2]=4; return t;})(),
+    portals:[{x:2,y:14,to:'overworld',toPos:{x:35*32+16,y:10*32+16}}],
+    chests:[],doors:[],enemies:[]
   }
 };
-function tileKey(c){return c===0?'grass':c===1?'path':c===2?'water':c===3?'tree':c===4?'portal':c===5?'wall':c===6?'floor':c===7?'door':'grass'}
-function solid(c){return (c===2||c===3||c===5||c===7)}
 
-/* ========= World ========= */
+/* ===== World Scene ===== */
 class World extends Phaser.Scene{
-  constructor(){ super('World'); }
-  init(d){ this.mapId=d.mapId||'overworld'; this.spawn=d.spawn||{x:200,y:300}; }
+  constructor(){super('World');}
+  init(d){this.mapId=d.mapId||'overworld';this.spawn=d.spawn||{x:200,y:300};}
   create(){
     this.hearts=SAVE.hearts; this.maxHearts=SAVE.maxHearts; this.stamina=SAVE.stamina; this.maxStamina=SAVE.maxStamina;
-    this.iframes=0; this.blocking=false; this.keysHeld=false;
+    this.iframes=0; this.blocking=false;
 
-    // Input
     this.cursors=this.input.keyboard.createCursorKeys();
     this.keys=this.input.keyboard.addKeys('W,A,S,D,J,K,L,E,P');
 
-    // Map
     this.loadMap(this.mapId);
 
-    // Player
     this.player=this.physics.add.image(this.spawn.x,this.spawn.y,'pl').setDepth(10);
     this.player.setCollideWorldBounds(true); this.player.speed=170;
 
-    // Camera
     this.cameras.main.setBounds(0,0,this.worldW,this.worldH);
     this.cameras.main.startFollow(this.player,true,0.08,0.08);
 
-    // Groups
     this.enemies=this.physics.add.group();
-    for(const e of (this.mapDef.enemies||[])){ const m=this.physics.add.image(e.x,e.y,'slime'); m.hp=28; this.enemies.add(m); }
-    // Boss
+    (this.mapDef.enemies||[]).forEach(e=>{const m=this.physics.add.image(e.x,e.y,'slime');m.hp=28;this.enemies.add(m);});
+
     if(this.mapDef.boss){
-      this.boss=this.physics.add.image(this.worldW/2,this.worldH/2,this.mapDef.boss); 
-      this.boss.hp= this.mapId==='wardenboss'? 320 : (this.mapId==='cinderboss'? 260 : 220);
+      this.boss=this.physics.add.image(this.worldW/2,this.worldH/2,this.mapDef.boss); this.boss.hp=220;
     }
 
-    // Chests
-    this.chestGroup = this.physics.add.staticGroup();
-    for(const c of (this.mapDef.chests||[])){ const box=this.chestGroup.create(c.x,c.y,'chest'); box.loot=c.loot; box.amount=c.amount; }
+    this.chestGroup=this.physics.add.staticGroup();
+    (this.mapDef.chests||[]).forEach(c=>{const box=this.chestGroup.create(c.x,c.y,'chest'); box.loot=c.loot; box.amount=c.amount;});
 
-    // Doors
-    this.doorGroup = this.physics.add.staticGroup();
-    for(const d of (this.mapDef.doors||[])){ const door=this.doorGroup.create(d.tx*this.tile+this.tile/2,d.ty*this.tile+this.tile/2,'door'); door.tx=d.tx; door.ty=d.ty; }
+    this.doorGroup=this.physics.add.staticGroup();
+    (this.mapDef.doors||[]).forEach(d=>{const door=this.doorGroup.create(d.tx*this.tile+this.tile/2,d.ty*this.tile+this.tile/2,'door'); door.tx=d.tx; door.ty=d.ty;});
 
-    // Forge/NPC
-    if(this.mapDef.forge){ this.forge=this.physics.add.staticImage(this.mapDef.forge.x,this.mapDef.forge.y,'forge'); }
-    if(this.mapDef.npc){ this.npc=this.physics.add.staticImage(this.mapDef.npc.x,this.mapDef.npc.y,'npc'); }
+    if(this.mapDef.forge) this.forge=this.physics.add.staticImage(this.mapDef.forge.x,this.mapDef.forge.y,'forge');
+    if(this.mapDef.npc)   this.npc=this.physics.add.staticImage(this.mapDef.npc.x,this.mapDef.npc.y,'npc');
 
-    // Collisions
     this.solidBodies=this.physics.add.staticGroup();
-    for(let y=0;y<this.rows;y++){ for(let x=0;x<this.cols;x++){ if(solid(this.map[y][x])){ const b=this.solidBodies.create(x*this.tile+this.tile/2,y*this.tile+this.tile/2,null); b.body.setSize(this.tile,this.tile); b.setVisible(false);} } }
+    for(let y=0;y<this.rows;y++){for(let x=0;x<this.cols;x++){if(solid(this.map[y][x])){const b=this.solidBodies.create(x*this.tile+this.tile/2,y*this.tile+this.tile/2,null); b.body.setSize(this.tile,this.tile); b.setVisible(false);}}}
     this.physics.add.collider(this.player,this.solidBodies);
     if(this.forge) this.physics.add.collider(this.player,this.forge);
     if(this.npc)   this.physics.add.collider(this.player,this.npc);
 
-    // Overlaps
-    this.physics.add.overlap(this.player,this.enemies,()=>{ if(!this.blocking) this.hit(6); });
-    if(this.boss) this.physics.add.overlap(this.player,this.boss,()=>{ if(!this.blocking) this.hit(10); });
+    this.physics.add.overlap(this.player,this.enemies,()=>{if(!this.blocking)this.hit(6);});
+    if(this.boss) this.physics.add.overlap(this.player,this.boss,()=>{if(!this.blocking)this.hit(10);});
 
-    // HUD
     this.statsEl=document.getElementById('stats'); this.heartsEl=document.getElementById('hearts');
     this.panel=document.getElementById('panel'); this.panelTitle=document.getElementById('panelTitle'); this.panelText=document.getElementById('panelText'); this.panelBtns=document.getElementById('panelBtns');
     this.refreshHUD();
   }
 
   loadMap(id){
-    this.mapId=id; this.mapDef= typeof MAPS[id]==='function' ? MAPS[id]() : MAPS[id];
-    this.tile=this.mapDef.tile; this.cols=this.mapDef.cols; this.rows=this.mapDef.rows;
+    this.mapId=id; this.mapDef=MAPS[id]; this.tile=this.mapDef.tile; this.cols=this.mapDef.cols; this.rows=this.mapDef.rows;
     this.map=this.mapDef.data; this.worldW=this.cols*this.tile; this.worldH=this.rows*this.tile;
     this.add.rectangle(this.worldW/2,this.worldH/2,this.worldW,this.worldH,0x0e1116).setDepth(0);
-    // tiles
-    for(let y=0;y<this.rows;y++){ for(let x=0;x<this.cols;x++){ const code=this.map[y][x]; const key=tileKey(code); this.add.image(x*this.tile,y*this.tile,key).setOrigin(0).setDepth(1);} }
-    // portals
-    this.portals={}; for(const p of (this.mapDef.portals||[])){ this.portals[p.y+','+p.x]=p; }
+    for(let y=0;y<this.rows;y++){for(let x=0;x<this.cols;x++){const code=this.map[y][x];const key=tileKey(code);this.add.image(x*this.tile,y*this.tile,key).setOrigin(0).setDepth(1);}}
+    this.portals={}; (this.mapDef.portals||[]).forEach(p=>{this.portals[p.y+','+p.x]=p;});
   }
 
-  /* ---- UI helpers ---- */
-  openPanel(title,text,btns){ this.panelTitle.innerText=title; this.panelText.innerText=text; this.panelBtns.innerHTML=''; for(const b of btns){ const el=document.createElement('button'); el.innerText=b.label; el.disabled=!!b.disabled; el.onclick=()=>{ this.closePanel(); b.onClick&&b.onClick(); }; this.panelBtns.appendChild(el);} this.panel.style.display='block'; }
-  closePanel(){ this.panel.style.display='none'; }
+  openPanel(title,text,btns){
+    this.panelTitle.textContent=title; this.panelText.textContent=text; this.panelBtns.innerHTML='';
+    (btns||[]).forEach(b=>{const el=document.createElement('button'); el.textContent=b.label; el.disabled=!!b.disabled; el.onclick=()=>{this.panel.style.display='none'; b.onClick&&b.onClick();}; this.panelBtns.appendChild(el);});
+    this.panel.style.display='block';
+  }
 
-  /* ---- Core Loop ---- */
   update(_,dt){
-    GP.update(); renderGP();
+    GP.update();
     const delta=dt/1000;
     this.iframes=Math.max(0,this.iframes-delta);
-    this.stamina=Math.min(this.maxStamina, this.stamina + 18*delta);
+    this.stamina=Math.min(this.maxStamina,this.stamina+18*delta);
 
-    // Movement
     let vx=0,vy=0;
-    if(this.cursors.left.isDown||this.keys.A.isDown) vx=-1; else if(this.cursors.right.isDown||this.keys.D.isDown) vx=1;
-    if(this.cursors.up.isDown||this.keys.W.isDown) vy=-1; else if(this.cursors.down.isDown||this.keys.S.isDown) vy=1;
-    if(GP.connected){ const ax=GP.axes[0]||0, ay=GP.axes[1]||0; if(Math.abs(ax)>0.25) vx=ax; if(Math.abs(ay)>0.25) vy=ay; if(GP.buttons[14]) vx=-1; if(GP.buttons[15]) vx=1; if(GP.buttons[12]) vy=-1; if(GP.buttons[13]) vy=1; }
+    if(this.cursors.left.isDown||this.keys.A.isDown)vx=-1; else if(this.cursors.right.isDown||this.keys.D.isDown)vx=1;
+    if(this.cursors.up.isDown||this.keys.W.isDown)vy=-1; else if(this.cursors.down.isDown||this.keys.S.isDown)vy=1;
+    if(GP.connected){const ax=GP.axes[0]||0, ay=GP.axes[1]||0; if(Math.abs(ax)>0.25)vx=ax; if(Math.abs(ay)>0.25)vy=ay;}
     const len=Math.hypot(vx,vy)||1;
     this.player.setVelocity((vx/len)*this.player.speed,(vy/len)*this.player.speed);
 
-    // Actions
-    const justAtk=Phaser.Input.Keyboard.JustDown(this.keys.J) || (GP.connected&&GP.buttons[0]);
-    const justDash=Phaser.Input.Keyboard.JustDown(this.keys.L) || (GP.connected&&GP.buttons[2]);
-    const justInt =Phaser.Input.Keyboard.JustDown(this.keys.E) || (GP.connected&&GP.buttons[3]);
-    const justMenu=Phaser.Input.Keyboard.JustDown(this.keys.P) || (GP.connected&&GP.buttons[9]);
+    const justAtk=Phaser.Input.Keyboard.JustDown(this.keys.J)||(GP.connected&&GP.buttons[0]);
+    const justDash=Phaser.Input.Keyboard.JustDown(this.keys.L)||(GP.connected&&GP.buttons[2]);
+    const justInt =Phaser.Input.Keyboard.JustDown(this.keys.E)||(GP.connected&&GP.buttons[3]);
+    const justMenu=Phaser.Input.Keyboard.JustDown(this.keys.P)||(GP.connected&&GP.buttons[9]);
     this.blocking=this.keys.K.isDown || (GP.connected&&GP.buttons[1]);
 
-    if(justAtk) this.tryAttack();
-    if(justDash) this.tryDash();
-    if(justInt) this.tryInteract();
-    if(justMenu) this.openMenu();
-
-    // Enemy AI
-    this.enemies.children.iterate(m=>{
-      if(!m||!m.active) return;
-      const ang=Phaser.Math.Angle.Between(m.x,m.y,this.player.x,this.player.y);
-      const sp=55;
-      m.setVelocity(Math.cos(ang)*sp,Math.sin(ang)*sp);
-      if(Phaser.Math.Distance.Between(m.x,m.y,this.player.x,this.player.y)<46 && Math.random()<0.01 && !this.blocking) this.hit(4);
-    });
-    if(this.boss && this.boss.active){
-      if(!this.boss.cool) this.boss.cool=0;
-      this.boss.cool-=delta;
-      const ang=Phaser.Math.Angle.Between(this.boss.x,this.boss.y,this.player.x,this.player.y);
-      const sp=(this.boss.cool>0)?180:90;
-      this.boss.setVelocity(Math.cos(ang)*sp,Math.sin(ang)*sp);
-      if(this.boss.cool<=0 && Phaser.Math.Distance.Between(this.boss.x,this.boss.y,this.player.x,this.player.y)<180){ this.boss.cool=2.4; }
-    }
+    if(justAtk)this.tryAttack();
+    if(justDash)this.tryDash();
+    if(justInt)this.tryInteract();
+    if(justMenu)this.openMenu();
   }
 
-  /* ---- Actions ---- */
   tryAttack(){
     const dmg=Math.max(1,EQUIP.atk());
-    // mobs
     this.enemies.children.iterate(m=>{
       if(m&&m.active&&Phaser.Math.Distance.Between(m.x,m.y,this.player.x,this.player.y)<52){
         m.hp-=dmg; m.setTint(0xffaaaa); this.time.delayedCall(120,()=>m.clearTint());
-        if(m.hp<=0){ m.destroy(); EQUIP.shards+=rand(2,6); this.refreshHUD(); save(); }
+        if(m.hp<=0){m.destroy();EQUIP.shards+=rand(2,6);this.refreshHUD();save();}
       }
     });
-    // boss
-    if(this.boss && this.boss.active && Phaser.Math.Distance.Between(this.boss.x,this.boss.y,this.player.x,this.player.y)<64){
+    if(this.boss&&this.boss.active&&Phaser.Math.Distance.Between(this.boss.x,this.boss.y,this.player.x,this.player.y)<64){
       this.boss.hp-=dmg; this.boss.setTint(0xfff59d); this.time.delayedCall(120,()=>this.boss.clearTint());
-      if(this.boss.hp<=0){
-        const reward = this.mapId==='wardenboss'? 150 : (this.mapId==='cinderboss'? 100 : 70);
-        EQUIP.shards+=reward;
-        this.boss.destroy();
-        if(this.mapId==='mossboss' && EQUIP.chapterIndex<1) EQUIP.chapterIndex=1;
-        if(this.mapId==='cinderboss' && EQUIP.chapterIndex<2) EQUIP.chapterIndex=2;
-        if(this.mapId==='wardenboss' && EQUIP.chapterIndex<3) EQUIP.chapterIndex=3;
-        save(); this.refreshHUD();
-        this.openPanel('Boss Defeated!','You seized '+reward+' Shards.',[{label:'Back',onClick:()=> this.gotoMapBack()}]);
-      }
+      if(this.boss.hp<=0){EQUIP.shards+=100; this.boss.destroy(); save(); this.refreshHUD(); this.openPanel('Boss Down!','You earned 100 Shards.',[{label:'Back',onClick:()=>this.gotoMap('overworld',{x:35*32+16,y:10*32+16})}]);}
     }
   }
   tryDash(){
-    if(this.stamina<25) return;
+    if(this.stamina<25)return;
     this.stamina-=25;
     const v=this.player.body.velocity; const mag=Math.hypot(v.x,v.y)||1;
     this.player.x+=(v.x/mag)*70; this.player.y+=(v.y/mag)*70;
     this.refreshHUD();
   }
   tryInteract(){
-    // Forge
     if(this.forge && Phaser.Math.Distance.Between(this.player.x,this.player.y,this.forge.x,this.forge.y)<50){
-      const canW=EQUIP.canUp('sword'), canS=EQUIP.canUp('shield'), canA=EQUIP.canUp('armor');
+      const canW=EQUIP.canUp('sword'),canS=EQUIP.canUp('shield'),canA=EQUIP.canUp('armor');
       const cw=EQUIP.cost('sword'), cs=EQUIP.cost('shield'), ca=EQUIP.cost('armor');
       this.openPanel('Forge — Spend Shards',[
-        (canW?`Upgrade Sword (${cw})`:`Sword Max or Locked`),
-        (canS?`Upgrade Shield (${cs})`:`Shield Max or Locked`),
-        (canA?`Upgrade Armor (${ca})`:`Armor Max or Locked`),
-        `Close`
-      ].map(label=>({label, onClick:()=>{
-        if(label.startsWith('Upgrade Sword')) EQUIP.tryUp('sword');
-        if(label.startsWith('Upgrade Shield')) EQUIP.tryUp('shield');
-        if(label.startsWith('Upgrade Armor')) EQUIP.tryUp('armor');
-        save(); this.refreshHUD();
-      }})));
-      return;
+        {label:canW?`Upgrade Sword (${cw})`:`Sword Max/Locked`,onClick:()=>{EQUIP.up('sword');this.refreshHUD();}},
+        {label:canS?`Upgrade Shield (${cs})`:`Shield Max/Locked`,onClick:()=>{EQUIP.up('shield');this.refreshHUD();}},
+        {label:canA?`Upgrade Armor (${ca})`:`Armor Max/Locked`,onClick:()=>{EQUIP.up('armor');this.refreshHUD();}},
+        {label:'Close'}
+      ]);return;
     }
-    // NPC (quest/save)
-    if(this.npc && Phaser.Math.Distance.Between(this.player.x,this.player.y,this.npc.x,this.npc.y)<50){
-      const ch=PROGRESSION.chapters[EQUIP.chapterIndex];
-      this.openPanel('Traveler', `"${ch.name}" — Goal: ${ch.goal}`, [
-        {label:'Mark Chapter Complete', disabled:(EQUIP.chapterIndex>=PROGRESSION.chapters.length-1), onClick:()=>{EQUIP.chapterIndex++; save(); this.refreshHUD();}},
-        {label:'Save Game', onClick:()=>{ SAVE.map=this.mapId; SAVE.spawn={x:this.player.x,y:this.player.y}; save(); }},
-        {label:'Reset Save', onClick:()=>{ localStorage.removeItem('rf_single'); location.reload(); }},
-        {label:'Close', onClick:()=>{} }
-      ]);
-      return;
-    }
-    // Chests
-    let opened = false;
+    let opened=false;
     this.chestGroup.children.iterate(ch=>{
-      if(opened||!ch.active) return;
+      if(opened||!ch.active)return;
       if(Phaser.Math.Distance.Between(this.player.x,this.player.y,ch.x,ch.y)<46){
         opened=true; ch.disableBody(true,true);
-        if(ch.loot==='shards'){ EQUIP.shards+=ch.amount; this.openPanel('Found Shards','+'+ch.amount,[{label:'OK',onClick:()=>{}}]); }
-        if(ch.loot==='keys'){ EQUIP.keys+=ch.amount; this.openPanel('Found Key','+'+ch.amount,[{label:'OK',onClick:()=>{}}]); }
-        if(ch.loot==='heart'){ this.maxHearts=Math.min(20,this.maxHearts+1); this.hearts=this.maxHearts; this.openPanel('Heart Piece','Max hearts +1',[{label:'OK',onClick:()=>{}}]); }
+        if(ch.loot==='shards'){EQUIP.shards+=ch.amount; this.openPanel('Found Shards','+'+ch.amount,[{label:'OK'}]);}
+        if(ch.loot==='keys'){EQUIP.keys+=ch.amount; this.openPanel('Found Key','+'+ch.amount,[{label:'OK'}]);}
         save(); this.refreshHUD();
       }
     });
-    if(opened) return;
-    // Doors
+    if(opened)return;
     let doorUsed=false;
     this.doorGroup.children.iterate(d=>{
-      if(doorUsed) return;
+      if(doorUsed)return;
       if(Phaser.Math.Distance.Between(this.player.x,this.player.y,d.x,d.y)<40){
-        if(EQUIP.keys>0){ EQUIP.keys--; d.disableBody(true,true); doorUsed=true; this.refreshHUD(); save(); }
-        else { this.openPanel('Locked Door','You need a Key.',[{label:'OK',onClick:()=>{}}]); }
+        if(EQUIP.keys>0){EQUIP.keys--; d.disableBody(true,true); doorUsed=true; this.refreshHUD(); save();}
+        else this.openPanel('Locked Door','You need a Key.',[{label:'OK'}]);
       }
     });
-    if(doorUsed) return;
-    // Portals
+    if(doorUsed)return;
     const tx=Math.floor(this.player.x/this.tile), ty=Math.floor(this.player.y/this.tile), key=ty+','+tx;
-    if(this.portals[key]){ const p=this.portals[key]; this.gotoMap(p.to,p.toPos); }
+    if(this.portals[key]){const p=this.portals[key]; this.gotoMap(p.to,p.toPos);}
   }
-
   openMenu(){
     const n=EQUIP.names();
-    const ch=PROGRESSION.chapters[EQUIP.chapterIndex];
     this.openPanel('Menu',`Gear:
 - ${n.sword}
 - ${n.shield}
 - ${n.armor}
 
-Stats: ATK ${EQUIP.atk()} • DEF ${EQUIP.def()}
-Keys: ${EQUIP.keys} • Shards: ${EQUIP.shards}
-Hearts: ${this.hearts}/${this.maxHearts} • Stamina: ${Math.round(this.stamina)}
-Chapter: ${ch.name} — Goal: ${ch.goal}`,[
-      {label:'Save', onClick:()=>{ SAVE.map=this.mapId; SAVE.spawn={x:this.player.x,y:this.player.y}; save(); }},
-      {label:'Close', onClick:()=>{}}
+ATK ${EQUIP.atk()} • DEF ${EQUIP.def()}
+Keys ${EQUIP.keys} • Shards ${EQUIP.shards}
+Hearts ${this.hearts}/${this.maxHearts} • Stamina ${Math.round(this.stamina)}`,[
+      {label:'Save',onClick:()=>{SAVE.map=this.mapId;SAVE.spawn={x:this.player.x,y:this.player.y};save();}},
+      {label:'Close'}
     ]);
   }
-
-  gotoMap(id,spawn){ this.scene.restart({mapId:id, spawn}); }
-  gotoMapBack(){
-    if(this.mapId==='mossboss') this.gotoMap('forest',{x:64,y:64});
-    if(this.mapId==='cinderboss') this.gotoMap('cavern',{x:64,y:64});
-    if(this.mapId==='wardenboss') this.gotoMap('gold',{x:64,y:64});
-  }
-
+  gotoMap(id,spawn){this.scene.restart({mapId:id,spawn});}
   hit(dmg){
-    if(this.iframes>0) return;
-    const mitigated=Math.max(1, dmg - EQUIP.def());
+    if(this.iframes>0)return;
+    const mitigated=Math.max(1,dmg-EQUIP.def());
     const heartsLost=Math.ceil(mitigated/6);
-    this.hearts=Math.max(0,this.hearts - heartsLost);
-    this.iframes=0.7;
-    this.player.setTint(0xff7777); this.time.delayedCall(140,()=>this.player.clearTint());
-    if(this.hearts<=0){ this.openPanel('You fell...','Try again from last save.',[{label:'Load',onClick:()=>{ location.reload(); }}]); }
+    this.hearts=Math.max(0,this.hearts-heartsLost);
+    this.iframes=.7; this.player.setTint(0xff7777); this.time.delayedCall(140,()=>this.player.clearTint());
+    if(this.hearts<=0){this.openPanel('You fell...','Loading last save.',[{label:'Load',onClick:()=>location.reload()}]);}
     this.refreshHUD();
   }
-
   refreshHUD(){
-    // hearts
-    const h=this.heartsEl; h.innerHTML='';
-    for(let i=0;i<this.maxHearts;i++){ const span=document.createElement('span'); span.className='heart'+(i<this.hearts?'':' empty'); h.appendChild(span); }
-    // stats
-    const n=EQUIP.names(); const ch=PROGRESSION.chapters[EQUIP.chapterIndex];
-    this.statsEl.innerHTML=`
-      <div class="row">
-        <div>Weapon: <strong>${n.sword}</strong></div>
-        <div>Shield: <strong>${n.shield}</strong></div>
-        <div>Armor: <strong>${n.armor}</strong></div>
-      </div>
-      <div class="row">
-        <div>ATK: <strong>${EQUIP.atk()}</strong></div>
-        <div>DEF: <strong>${EQUIP.def()}</strong></div>
-        <div>Keys: <strong>${EQUIP.keys}</strong></div>
-        <div>Shards: <strong>${EQUIP.shards}</strong></div>
-        <div>Stamina: <strong>${Math.round(this.stamina)}</strong></div>
-        <div>Tier Cap: <strong>${EQUIP.maxTier()}</strong></div>
-      </div>
-      <div class="row">
-        <div>Chapter: <strong>${ch.name}</strong> — Goal: <strong>${ch.goal}</strong></div>
-        <div>Map: <strong>${this.mapId}</strong></div>
-      </div>`;
+    const h=document.getElementById('hearts'); h.innerHTML='';
+    for(let i=0;i<this.maxHearts;i++){const s=document.createElement('span'); s.className='heart'+(i<this.hearts?'':' empty'); h.appendChild(s);}
+    const n=EQUIP.names();
+    document.getElementById('stats').innerHTML=
+      `Weapon: <strong>${n.sword}</strong> • Shield: <strong>${n.shield}</strong> • Armor: <strong>${n.armor}</strong> |
+       ATK <strong>${EQUIP.atk()}</strong> • DEF <strong>${EQUIP.def()}</strong> • Keys <strong>${EQUIP.keys}</strong> • Shards <strong>${EQUIP.shards}</strong>`;
   }
 }
 
-/* ========= Phaser Config (Force Canvas for iPhone) ========= */
-const config={ type:Phaser.CANVAS, width:960, height:540, parent:'game', backgroundColor:'#0d1117',
-  physics:{ default:'arcade', arcade:{ gravity:{y:0}, debug:false } },
-  scene:[Boot, World]
-};
-new Phaser.Game(config);
+/* ===== Phaser (force Canvas) ===== */
+new Phaser.Game({type:Phaser.CANVAS,width:960,height:540,parent:'game',backgroundColor:'#0d1117',physics:{default:'arcade',arcade:{gravity:{y:0},debug:false}},scene:[Boot,World]});
 
-/* ========= Optional: On-screen error helper (silent unless error) ========= */
+/* ===== Friendly error overlay ===== */
 window.addEventListener('error', e=>{
   const box=document.createElement('div');
   box.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;background:#b00020;color:#fff;padding:8px;border-radius:8px;font:12px/1.3 system-ui;z-index:99999';

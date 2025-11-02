@@ -1,174 +1,307 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-  <title>Roberto RPG (Single-File)</title>
-  <style>
-    html,body{margin:0;height:100%;background:#0e0e12;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-    #wrap{display:flex;flex-direction:column;height:100%}
-    header{padding:10px 12px;background:#14141c;display:flex;justify-content:space-between;align-items:center;gap:8px}
-    .btn{background:#2c2c3a;border:1px solid #3b3b52;border-radius:10px;color:#fff;padding:8px 12px;font-weight:600}
-    .btn:active{transform:scale(.98)}
-    #game{flex:1;display:flex;align-items:center;justify-content:center}
-    canvas{background:#1b1b28;border:2px solid #2f2f46;border-radius:10px;touch-action:none}
-    #pad{position:fixed;left:10px;bottom:10px;display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:6px;opacity:.9}
-    #pad button{width:60px;height:60px;border-radius:14px;background:#1f2233;border:1px solid #3a3f63;color:#fff;font-size:18px}
-    #pad .empty{background:transparent;border:none}
-    #acts{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;opacity:.9}
-    #acts button{width:84px;height:60px;border-radius:14px;background:#1f2233;border:1px solid #3a3f63;color:#fff;font-size:16px}
-    #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222b3d;border:1px solid #3a4a6a;padding:8px 12px;border-radius:8px;display:none}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Roberto RPG — Open-World Demo</title>
+<style>
+  :root{--ui:#2f6df2;--ui2:#1c2740;--ink:#e6ecff;}
+  html,body{margin:0;height:100%;background:#0c0f1b;color:#cfd8ff;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  #wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(180deg,#0c1124 0%,rgba(12,17,36,0.65) 100%);backdrop-filter:saturate(120%) blur(6px);-webkit-backdrop-filter:saturate(120%) blur(6px);z-index:10}
+  header .title{font-weight:700;letter-spacing:.2px}
+  header .btn{appearance:none;border:1px solid rgba(255,255,255,.12);background:var(--ui2);color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer}
+  header .btn:active{transform:scale(.98)}
+  canvas{width:100vw;height:calc(100vh - 56px);display:block;touch-action:none;image-rendering:pixelated;image-rendering:crisp-edges}
+  /* Touch UI */
+  #pad{position:fixed;left:12px;bottom:16px;display:grid;grid-template-columns:64px 64px 64px;grid-template-rows:64px 64px;gap:12px;z-index:20;opacity:.95}
+  #pad .joystick{grid-column:1/span 2;grid-row:1/span 2;width:140px;height:140px;border-radius:90px;background:rgba(22,28,48,.55);border:1px solid rgba(255,255,255,.08);position:relative;touch-action:none}
+  #pad .knob{position:absolute;left:50%;top:50%;translate:-50% -50%;width:78px;height:78px;border-radius:60px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)}
+  #acts{position:fixed;right:12px;bottom:18px;display:flex;gap:16px;z-index:20;opacity:.95}
+  .round{width:78px;height:78px;border-radius:60px;border:1px solid rgba(255,255,255,.12);background:radial-gradient(100% 100% at 30% 30%,rgba(255,255,255,.14),rgba(255,255,255,.05));color:#fff;font-weight:700;display:grid;place-items:center}
+  .round:active{transform:scale(.96)}
+  @media (min-width:900px){
+    #pad{left:20px;bottom:20px}
+    #acts{right:20px;bottom:24px}
+  }
+</style>
 </head>
 <body>
 <div id="wrap">
   <header>
-    <div><strong>Roberto RPG</strong> — single-file mobile demo</div>
-    <div style="display:flex;gap:8px;">
-      <button id="btnFull" class="btn">Fullscreen</button>
-      <button id="btnSound" class="btn">Sound: Off</button>
+    <div class="title">Roberto RPG — <span style="opacity:.75">open-world demo</span></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btnFull">Fullscreen</button>
+      <button class="btn" id="btnSound">Sound: <b>On</b></button>
     </div>
   </header>
-  <div id="game">
-    <canvas id="cv" width="480" height="320"></canvas>
-  </div>
+  <canvas id="c"></canvas>
 </div>
 
-<div id="pad" aria-label="move">
-  <button class="empty" disabled></button>
-  <button data-key="ArrowUp">▲</button>
-  <button class="empty" disabled></button>
-  <button data-key="ArrowLeft">◀</button>
-  <button data-key="ArrowDown">▼</button>
-  <button data-key="ArrowRight">▶</button>
-  <button class="empty" disabled></button>
-  <button data-key="Dash">⤴︎</button>
-  <button class="empty" disabled></button>
+<!-- Touch controls -->
+<div id="pad">
+  <div class="joystick" id="joy"><div class="knob" id="knob"></div></div>
 </div>
 <div id="acts">
-  <button data-key="Interact">Interact</button>
-  <button data-key="Attack">Attack</button>
+  <button class="round" id="btnA">A</button>
+  <button class="round" id="btnB">B</button>
 </div>
-<div id="toast"></div>
 
 <script>
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
+/* ---------- Canvas + DPR ---------- */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let DPR = 1;
+function resize(){
+  DPR = Math.max(1, Math.floor(window.devicePixelRatio||1));
+  const w = window.innerWidth, h = window.innerHeight - 56;
+  canvas.width = Math.floor(w * DPR);
+  canvas.height = Math.floor(h * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener('resize', resize, {passive:true}); resize();
 
-const tile = 32;
-const cols = Math.floor(W / tile);
-const rows = Math.floor(H / tile);
-
-const map = [];
-for (let r=0;r<rows;r++){
-  map[r] = [];
-  for (let c=0;c<cols;c++){
-    const wall = (r==0||c==0||r==rows-1||c==cols-1|| (r%4==0 && c%6==0));
-    map[r][c] = wall ? 1 : 0;
+/* ---------- Mini world generation ---------- */
+// World size (tiles)
+const W = 160, H = 120, TS = 24; // tile size
+const world = new Uint8Array(W*H); // 0 grass, 1 dirt path, 2 water, 3 sand, 4 rock
+// simple hash noise
+const h32 = (x)=>{ x|=0; x ^= x>>>13; x = (x*1274126177)|0; return ((x^ (x>>>16))>>>0)/4294967295; };
+function n2(x,y,s=1){ return (h32((x*92837111^y*689287499)+s*19997)+h32((x*1237^y*31337)+s*777))*.5; }
+// paint base biomes
+for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+    const e = n2(x*4,y*4,1);      // elevation-ish
+    const m = n2(x*6+999,y*6-777,2); // moisture-ish
+    let t=0;
+    if(e<0.28) t=2;               // water
+    else if(e<0.32) t=3;          // sand shore
+    else if(e>0.86) t=4;          // rock
+    else t=0;                     // grass
+    // sprinkling dirt paths as Perlin-y streaks
+    if(n2(x,y,33)>0.66 && e>0.3 && e<0.85) t=1;
+    world[y*W+x]=t;
   }
 }
-
-const player = {x: tile*2, y: tile*2, w: 22, h: 22, speed: 2.1, dash: 4.0, color:'#58f1a7', vx:0, vy:0};
-const enemy = {x: tile*(cols-3), y: tile*(rows-3), w: 22, h: 22, color:'#ff6b6b', t:0};
-
-let keys = {};
-let audioEnabled = false;
-let swordSound;
-
-function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
-function tileAt(px,py){
-  const c = Math.floor(px / tile);
-  const r = Math.floor(py / tile);
-  if (r<0||c<0||r>=rows||c>=cols) return 1;
-  return map[r][c];
+// scatter objects (trees & stones)
+const trees=[], stones=[];
+for(let i=0;i<900;i++){
+  const x=(Math.random()*W)|0, y=(Math.random()*H)|0, t=world[y*W+x];
+  if(t===0 && Math.random()<.8) trees.push({x,y});
 }
-function collide(obj, nx, ny){
-  const left = tileAt(nx, obj.y);
-  const right = tileAt(nx+obj.w, obj.y);
-  const downL = tileAt(nx, ny+obj.h);
-  const downR = tileAt(nx+obj.w, ny+obj.h);
-  return (left||right||downL||downR);
+for(let i=0;i<180;i++){
+  const x=(Math.random()*W)|0, y=(Math.random()*H)|0;
+  if(world[y*W+x]!==2) stones.push({x,y});
 }
 
-function update(){
-  const speed = keys['Dash'] ? player.dash : player.speed;
-  player.vx = (keys['ArrowRight']?1:0) - (keys['ArrowLeft']?1:0);
-  player.vy = (keys['ArrowDown']?1:0) - (keys['ArrowUp']?1:0);
-  let nx = player.x + player.vx * speed;
-  let ny = player.y + player.vy * speed;
-  if (!collide(player, nx, player.y)) player.x = nx;
-  if (!collide(player, player.x, ny)) player.y = ny;
+/* ---------- Player & camera ---------- */
+const player = { x: W*0.5, y:H*0.5, r:10, vx:0, vy:0, speed:3.2, facing:1, hp:5 };
+const cam = { x:0, y:0 };
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
-  enemy.t += 0.02;
-  enemy.x += Math.cos(enemy.t)*0.5;
-  enemy.y += Math.sin(enemy.t)*0.5;
+/* ---------- Input (keyboard + joystick) ---------- */
+const keys={};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+
+const joy = document.getElementById('joy'), knob = document.getElementById('knob');
+let joyVec={x:0,y:0}, joyActive=false;
+function joySet(e){
+  const rect = joy.getBoundingClientRect();
+  const cx = rect.left+rect.width/2, cy = rect.top+rect.height/2;
+  const t = (e.touches? e.touches[0]: e);
+  let dx = t.clientX - cx, dy = t.clientY - cy;
+  const max = rect.width*0.35, d = Math.hypot(dx,dy) || 1;
+  const scale = Math.min(1, d/max);
+  dx = dx/d * max * scale; dy = dy/d * max * scale;
+  knob.style.transform = `translate(${dx}px,${dy}px)`;
+  joyVec = {x: (dx/max), y: (dy/max)};
+}
+joy.addEventListener('pointerdown', e=>{joyActive=true; joySet(e); joy.setPointerCapture(e.pointerId);});
+joy.addEventListener('pointermove', e=>{ if(joyActive) joySet(e); });
+joy.addEventListener('pointerup', e=>{joyActive=false; knob.style.transform='translate(0,0)'; joyVec={x:0,y:0};});
+
+/* ---------- Actions ---------- */
+let soundOn=true;
+document.getElementById('btnSound').onclick=()=>{
+  soundOn=!soundOn;
+  document.getElementById('btnSound').innerHTML=`Sound: <b>${soundOn?'On':'Off'}</b>`;
+};
+document.getElementById('btnFull').onclick=()=>{
+  const el = document.documentElement;
+  if(!document.fullscreenElement){ (el.requestFullscreen||el.webkitRequestFullscreen).call(el); }
+  else{ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
+};
+document.getElementById('btnA').onclick=()=>pulse('A');
+document.getElementById('btnB').onclick=()=>pulse('B');
+function pulse(which){ // tiny feedback + placeholder action
+  if(soundOn) beep(which==='A'?660:440, 0.05);
 }
 
-function draw(){
-  ctx.fillStyle = '#101221';
-  ctx.fillRect(0,0,W,H);
-  for (let r=0;r<rows;r++){
-    for (let c=0;c<cols;c++){
-      ctx.fillStyle = map[r][c] ? '#23283f' : '#14182b';
-      ctx.fillRect(c*tile, r*tile, tile, tile);
+/* ---------- Tiny audio beep ---------- */
+let actx;
+function beep(freq=440, dur=0.07){
+  actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type='sine'; o.frequency.value=freq;
+  o.connect(g); g.connect(actx.destination);
+  g.gain.setValueAtTime(0.0001, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.2, actx.currentTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
+  o.start(); o.stop(actx.currentTime+dur+0.02);
+}
+
+/* ---------- Rendering helpers ---------- */
+const skyGrad = ()=> {
+  const g = ctx.createLinearGradient(0,0,0,canvas.height/DPR);
+  const t = (Date.now()/1000)%20; // day-night cycle
+  const k = Math.abs((t-10)/10);   // 0..1..0
+  const top = `hsl(${210+40*k}deg 60% ${12+10*k}%)`;
+  const bot = `hsl(${220}deg 60% ${8+5*k}%)`;
+  g.addColorStop(0, top);
+  g.addColorStop(1, bot);
+  return g;
+};
+function drawParallax(){
+  // distant stars/clouds
+  ctx.fillStyle = skyGrad();
+  ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR);
+  ctx.save();
+  ctx.globalAlpha = .25;
+  ctx.fillStyle = '#fff';
+  for(let i=0;i<80;i++){
+    const x=((i*97)%1200)- (cam.x*0.2 % 1200);
+    const y=((i*53)%600) + 30*Math.sin((i*13)+Date.now()*0.0003);
+    ctx.fillRect((x%1200)-10,(y%700),2,2);
+  }
+  ctx.restore();
+}
+function drawTile(x,y,t){
+  const px = Math.floor(x*TS - cam.x), py = Math.floor(y*TS - cam.y);
+  if(px<-TS || py<-TS || px>canvas.width/DPR || py>canvas.height/DPR) return;
+  // base color
+  let col='#1b2136';
+  if(t===0) col='#13262e';           // grass
+  if(t===1) col='#3b2f22';           // dirt
+  if(t===2) col='#0c1e3c';           // water
+  if(t===3) col='#3a3323';           // sand
+  if(t===4) col='#2a2d37';           // rock
+  // rounded tile
+  const r=6;
+  ctx.fillStyle=col;
+  roundRect(px+1,py+1,TS-2,TS-2,r,true,false);
+  // subtle highlight
+  ctx.strokeStyle='rgba(255,255,255,.04)';
+  ctx.lineWidth=1;
+  ctx.strokeRect(px+1.5,py+1.5,TS-3,TS-3);
+}
+function roundRect(x,y,w,h,r,fill,stroke){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  if(fill) ctx.fill();
+  if(stroke) ctx.stroke();
+}
+function drawTree(tx,ty){
+  const x = tx*TS - cam.x + TS/2, y = ty*TS - cam.y + TS/2;
+  if(x<-40||y<-40||x>canvas.width/DPR+40||y>canvas.height/DPR+40) return;
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=10;
+  ctx.fillStyle='#1b7d5c';
+  ctx.beginPath(); ctx.arc(x,y-6,12,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#0e5a41'; ctx.beginPath(); ctx.arc(x-8,y-6,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1c2a1f'; roundRect(x-2,y+2,4,10,2,true,false);
+  ctx.restore();
+}
+function drawStone(tx,ty){
+  const x = tx*TS - cam.x + TS/2, y = ty*TS - cam.y + TS/2;
+  if(x<-40||y<-40||x>canvas.width/DPR+40||y>canvas.height/DPR+40) return;
+  ctx.save();
+  ctx.fillStyle='#6f7a8a';
+  roundRect(x-8,y-6,16,12,4,true,false);
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.strokeRect(x-8.5,y-6.5,17,13);
+  ctx.restore();
+}
+
+/* ---------- Game loop ---------- */
+let last=0;
+function step(t){
+  const dt = Math.min(33,(t-last)||16)/16.666; last=t;
+  update(dt); render();
+  requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
+
+function update(dt){
+  // input vector
+  let ax = (keys['arrowright']||keys['d']?1:0) - (keys['arrowleft']||keys['a']?1:0) + joyVec.x;
+  let ay = (keys['arrowdown']||keys['s']?1:0) - (keys['arrowup']||keys['w']?1:0) + joyVec.y;
+  const mag = Math.hypot(ax,ay);
+  if(mag>1) {ax/=mag; ay/=mag;}
+  player.vx = ax * player.speed;
+  player.vy = ay * player.speed;
+  if(Math.abs(ax)>0.01) player.facing = Math.sign(ax);
+  // movement with simple collision vs water & rocks
+  const nx = clamp(player.x + player.vx*dt, 1, W-2);
+  const ny = clamp(player.y + player.vy*dt, 1, H-2);
+  const tile = (x,y)=>world[(y|0)*W + (x|0)];
+  const passable = (t)=> t!==2 && t!==4;
+  if(passable(tile(nx, player.y))) player.x = nx;
+  if(passable(tile(player.x, ny))) player.y = ny;
+  // camera follows with smoothing
+  cam.x += ((player.x*TS - (canvas.width/DPR)/2) - cam.x) * 0.12;
+  cam.y += ((player.y*TS - (canvas.height/DPR)/2) - cam.y) * 0.12;
+}
+
+function render(){
+  drawParallax();
+  // light vignette
+  const g = ctx.createRadialGradient(
+    (player.x*TS - cam.x), (player.y*TS - cam.y), 40,
+    (player.x*TS - cam.x), (player.y*TS - cam.y), 600
+  );
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(0,0,0,0.18)');
+  // draw tiles in view
+  const sx = Math.floor(cam.x/TS)-1, sy = Math.floor(cam.y/TS)-1;
+  const ex = sx + Math.ceil(canvas.width/(DPR*TS))+3;
+  const ey = sy + Math.ceil(canvas.height/(DPR*TS))+3;
+  for(let y=sy;y<ey;y++){
+    for(let x=sx;x<ex;x++){
+      if(x<0||y<0||x>=W||y>=H) continue;
+      drawTile(x,y,world[y*W+x]);
     }
   }
-  rect(player.x, player.y, player.w, player.h, player.color);
-  rect(enemy.x, enemy.y, enemy.w, enemy.h, enemy.color);
-  requestAnimationFrame(loop);
+  // objects
+  trees.forEach(o=>drawTree(o.x,o.y));
+  stones.forEach(o=>drawStone(o.x,o.y));
+  // player (rounded capsule)
+  const px = Math.floor(player.x*TS - cam.x);
+  const py = Math.floor(player.y*TS - cam.y);
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=12;
+  ctx.fillStyle='#58b3ff';
+  roundRect(px-10,py-14,20,28,10,true,false);
+  // face
+  ctx.fillStyle='#0b1b2b'; roundRect(px-6,py-6,12,8,3,true,false);
+  // little nose to show facing
+  ctx.fillStyle='#9ad1ff'; ctx.fillRect(px+(player.facing>0?3:-5),py-2,2,2);
+  ctx.restore();
+  // vignette overlay
+  ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR);
+  // HUD
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  ctx.fillRect(10, canvas.height/DPR-28, 150, 20);
+  ctx.fillStyle='#9ad1ff';
+  ctx.fillText('HP: ♥♥♥♥♥', 16, canvas.height/DPR-14);
 }
 
-function loop(){
-  update();
-  draw();
-}
-
-function toast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display='block';
-  setTimeout(()=>t.style.display='none',1200);
-}
-
-function initAudio(){
-  if (audioEnabled) return;
-  const ac = new (window.AudioContext||window.webkitAudioContext)();
-  function beep(freq, dur=0.08){
-    const o=ac.createOscillator();const g=ac.createGain();
-    o.connect(g);g.connect(ac.destination);
-    o.type='square';o.frequency.value=freq;g.gain.value=0.08;
-    o.start(); setTimeout(()=>{o.stop();}, dur*1000);
-  }
-  swordSound = ()=>beep(440,0.12);
-  audioEnabled = true;
-  toast('Sound On');
-  document.getElementById('btnSound').textContent='Sound: On';
-}
-
-document.addEventListener('keydown',e=>{keys[e.key]=true;});
-document.addEventListener('keyup',e=>{keys[e.key]=false;});
-document.getElementById('btnFull').addEventListener('click',()=>{
-  const el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen();
-});
-document.getElementById('btnSound').addEventListener('click', initAudio);
-
-function bindPad(){
-  document.querySelectorAll('#pad [data-key], #acts [data-key]').forEach(btn=>{
-    const k = btn.getAttribute('data-key');
-    const on = (e)=>{e.preventDefault(); keys[k]=true; if(k==='Attack'&&audioEnabled) swordSound();};
-    const off = (e)=>{e.preventDefault(); keys[k]=false;};
-    btn.addEventListener('touchstart', on, {passive:false});
-    btn.addEventListener('touchend', off, {passive:false});
-    btn.addEventListener('mousedown', on);
-    btn.addEventListener('mouseup', off);
-    btn.addEventListener('mouseleave', off);
-  });
-}
-bindPad();
-
-requestAnimationFrame(loop);
+/* Prevent iOS scroll on canvas */
+document.addEventListener('gesturestart', e=>e.preventDefault());
 </script>
 </body>
 </html>

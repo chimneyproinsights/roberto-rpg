@@ -1,307 +1,565 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>Roberto RPG — Open-World Demo</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Roberto Fantasy — Art + Maps (Single File)</title>
 <style>
-  :root{--ui:#2f6df2;--ui2:#1c2740;--ink:#e6ecff;}
-  html,body{margin:0;height:100%;background:#0c0f1b;color:#cfd8ff;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  #wrap{position:fixed;inset:0;display:flex;flex-direction:column}
-  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(180deg,#0c1124 0%,rgba(12,17,36,0.65) 100%);backdrop-filter:saturate(120%) blur(6px);-webkit-backdrop-filter:saturate(120%) blur(6px);z-index:10}
-  header .title{font-weight:700;letter-spacing:.2px}
-  header .btn{appearance:none;border:1px solid rgba(255,255,255,.12);background:var(--ui2);color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer}
-  header .btn:active{transform:scale(.98)}
-  canvas{width:100vw;height:calc(100vh - 56px);display:block;touch-action:none;image-rendering:pixelated;image-rendering:crisp-edges}
-  /* Touch UI */
-  #pad{position:fixed;left:12px;bottom:16px;display:grid;grid-template-columns:64px 64px 64px;grid-template-rows:64px 64px;gap:12px;z-index:20;opacity:.95}
-  #pad .joystick{grid-column:1/span 2;grid-row:1/span 2;width:140px;height:140px;border-radius:90px;background:rgba(22,28,48,.55);border:1px solid rgba(255,255,255,.08);position:relative;touch-action:none}
-  #pad .knob{position:absolute;left:50%;top:50%;translate:-50% -50%;width:78px;height:78px;border-radius:60px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)}
-  #acts{position:fixed;right:12px;bottom:18px;display:flex;gap:16px;z-index:20;opacity:.95}
-  .round{width:78px;height:78px;border-radius:60px;border:1px solid rgba(255,255,255,.12);background:radial-gradient(100% 100% at 30% 30%,rgba(255,255,255,.14),rgba(255,255,255,.05));color:#fff;font-weight:700;display:grid;place-items:center}
-  .round:active{transform:scale(.96)}
-  @media (min-width:900px){
-    #pad{left:20px;bottom:20px}
-    #acts{right:20px;bottom:24px}
-  }
+  html, body { margin:0; padding:0; background:#0b0c10; color:#fff; font-family: system-ui, -apple-system, Arial; }
+  #game { display:flex; justify-content:center; align-items:center; height:100vh; }
+  .hud { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.55); padding:8px 10px; border-radius:10px; font-size:14px; line-height:1.4; box-shadow:0 0 12px rgba(0,0,0,0.35); }
+  .hud .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .panel { position:absolute; bottom: 14px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); padding:12px 14px; border-radius:10px; min-width: 340px; text-align:center; box-shadow:0 0 16px rgba(0,0,0,0.45); }
+  .panel h3 { margin: 4px 0 8px; font-size:16px; }
+  .btnbar { margin-top:8px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  button { background:#1e88e5; border:none; color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
+  button:disabled { background:#666; cursor:not-allowed;}
+  .gp { position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.55); padding:8px 10px; border-radius:10px; font-size:12px; box-shadow:0 0 12px rgba(0,0,0,0.35); }
+  .gp strong { color:#ffd54a; }
+  .corner { position:absolute; bottom:10px; right:10px; opacity:0.6; font-size:12px; }
 </style>
 </head>
 <body>
-<div id="wrap">
-  <header>
-    <div class="title">Roberto RPG — <span style="opacity:.75">open-world demo</span></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" id="btnFull">Fullscreen</button>
-      <button class="btn" id="btnSound">Sound: <b>On</b></button>
-    </div>
-  </header>
-  <canvas id="c"></canvas>
-</div>
+  <div id="game"></div>
+  <div class="hud" id="hud">
+    <div><strong>Roberto Fantasy — Demo (Art + Maps)</strong></div>
+    <div>Move: WASD/Arrows • Attack: J / <em>A</em> • Block: K / <em>B</em> • Dash: L / <em>X</em> • Interact: E / <em>Y</em></div>
+    <div>Dev tier cycle: LB/RB/LT or U/I/O</div>
+    <div id="stats"></div>
+  </div>
+  <div class="panel" id="panel" style="display:none;">
+    <h3 id="panelTitle"></h3>
+    <div id="panelText"></div>
+    <div class="btnbar" id="panelBtns"></div>
+  </div>
+  <div class="gp" id="gp">Gamepad: <strong>None</strong></div>
+  <div class="corner">v1.0 single-file</div>
 
-<!-- Touch controls -->
-<div id="pad">
-  <div class="joystick" id="joy"><div class="knob" id="knob"></div></div>
-</div>
-<div id="acts">
-  <button class="round" id="btnA">A</button>
-  <button class="round" id="btnB">B</button>
-</div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.js"></script>
 
-<script>
-/* ---------- Canvas + DPR ---------- */
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let DPR = 1;
-function resize(){
-  DPR = Math.max(1, Math.floor(window.devicePixelRatio||1));
-  const w = window.innerWidth, h = window.innerHeight - 56;
-  canvas.width = Math.floor(w * DPR);
-  canvas.height = Math.floor(h * DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-}
-addEventListener('resize', resize, {passive:true}); resize();
-
-/* ---------- Mini world generation ---------- */
-// World size (tiles)
-const W = 160, H = 120, TS = 24; // tile size
-const world = new Uint8Array(W*H); // 0 grass, 1 dirt path, 2 water, 3 sand, 4 rock
-// simple hash noise
-const h32 = (x)=>{ x|=0; x ^= x>>>13; x = (x*1274126177)|0; return ((x^ (x>>>16))>>>0)/4294967295; };
-function n2(x,y,s=1){ return (h32((x*92837111^y*689287499)+s*19997)+h32((x*1237^y*31337)+s*777))*.5; }
-// paint base biomes
-for(let y=0;y<H;y++){
-  for(let x=0;x<W;x++){
-    const e = n2(x*4,y*4,1);      // elevation-ish
-    const m = n2(x*6+999,y*6-777,2); // moisture-ish
-    let t=0;
-    if(e<0.28) t=2;               // water
-    else if(e<0.32) t=3;          // sand shore
-    else if(e>0.86) t=4;          // rock
-    else t=0;                     // grass
-    // sprinkling dirt paths as Perlin-y streaks
-    if(n2(x,y,33)>0.66 && e>0.3 && e<0.85) t=1;
-    world[y*W+x]=t;
+  <script>
+  // ---------- Data (inline) ----------
+  const TIERS = {
+    levels: [
+      {level:1, name:'Bronze', color:'#b87333', multiplier:1.0},
+      {level:2, name:'Iron', color:'#a1a1a1', multiplier:1.15},
+      {level:3, name:'Steel', color:'#9bb0bd', multiplier:1.32},
+      {level:4, name:'Mithril', color:'#7ad0ff', multiplier:1.52},
+      {level:5, name:'Obsidian', color:'#3b2f36', multiplier:1.75},
+      {level:6, name:'Dragonbone', color:'#d9c089', multiplier:2.02},
+      {level:7, name:'Gold', color:'#ffd54a', multiplier:2.35},
+    ]
+  };
+  function computeItems(tiers){
+    const swords=[], shields=[], armors=[];
+    for(const t of tiers.levels){
+      const L=t.level, M=t.multiplier, N=t.name;
+      const sword_atk = Math.round(6*M + (L-1)*2);
+      const shield_def = Math.round(3*M + (L-1)*1.5);
+      const armor_atk = Math.round(1*M + (L-1)*0.5);
+      const armor_def = Math.round(2*M + (L-1)*1.2);
+      swords.push({ level:L, name:\`\${N} Blade\`, attack:sword_atk });
+      shields.push({ level:L, name:\`\${N} Shield\`, defense:shield_def });
+      armors.push({ level:L, name:\`\${N} Armor\`, attack_bonus:armor_atk, defense_bonus:armor_def });
+    }
+    return { swords, shields, armors };
   }
-}
-// scatter objects (trees & stones)
-const trees=[], stones=[];
-for(let i=0;i<900;i++){
-  const x=(Math.random()*W)|0, y=(Math.random()*H)|0, t=world[y*W+x];
-  if(t===0 && Math.random()<.8) trees.push({x,y});
-}
-for(let i=0;i<180;i++){
-  const x=(Math.random()*W)|0, y=(Math.random()*H)|0;
-  if(world[y*W+x]!==2) stones.push({x,y});
-}
+  const ITEMS = computeItems(TIERS);
+  const PROGRESSION = {
+    chapters:[
+      {id:'c1', name:'Awakening', goal:'Find the Ancient Spark', unlocks:{maxTier:2}},
+      {id:'c2', name:'Forest of Trials', goal:'Defeat the Thornwatcher', unlocks:{maxTier:3}},
+      {id:'c3', name:'Sundered Cliffs', goal:'Recover the Sky Sigil', unlocks:{maxTier:4}},
+      {id:'c4', name:'Miresong Depths', goal:'Cleanse the Mire Heart', unlocks:{maxTier:5}},
+      {id:'c5', name:'Dragonwake Peaks', goal:'Slay the Stormdrake', unlocks:{maxTier:6}},
+      {id:'c6', name:'Citadel of Gold', goal:'Defeat the Gilded Warden', unlocks:{maxTier:7}},
+    ],
+    economy:{ currency:'Shards', base_drop_per_enemy:[1,2], boss_bonus:[30,60] }
+  };
 
-/* ---------- Player & camera ---------- */
-const player = { x: W*0.5, y:H*0.5, r:10, vx:0, vy:0, speed:3.2, facing:1, hp:5 };
-const cam = { x:0, y:0 };
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-
-/* ---------- Input (keyboard + joystick) ---------- */
-const keys={};
-addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;});
-addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
-
-const joy = document.getElementById('joy'), knob = document.getElementById('knob');
-let joyVec={x:0,y:0}, joyActive=false;
-function joySet(e){
-  const rect = joy.getBoundingClientRect();
-  const cx = rect.left+rect.width/2, cy = rect.top+rect.height/2;
-  const t = (e.touches? e.touches[0]: e);
-  let dx = t.clientX - cx, dy = t.clientY - cy;
-  const max = rect.width*0.35, d = Math.hypot(dx,dy) || 1;
-  const scale = Math.min(1, d/max);
-  dx = dx/d * max * scale; dy = dy/d * max * scale;
-  knob.style.transform = `translate(${dx}px,${dy}px)`;
-  joyVec = {x: (dx/max), y: (dy/max)};
-}
-joy.addEventListener('pointerdown', e=>{joyActive=true; joySet(e); joy.setPointerCapture(e.pointerId);});
-joy.addEventListener('pointermove', e=>{ if(joyActive) joySet(e); });
-joy.addEventListener('pointerup', e=>{joyActive=false; knob.style.transform='translate(0,0)'; joyVec={x:0,y:0};});
-
-/* ---------- Actions ---------- */
-let soundOn=true;
-document.getElementById('btnSound').onclick=()=>{
-  soundOn=!soundOn;
-  document.getElementById('btnSound').innerHTML=`Sound: <b>${soundOn?'On':'Off'}</b>`;
-};
-document.getElementById('btnFull').onclick=()=>{
-  const el = document.documentElement;
-  if(!document.fullscreenElement){ (el.requestFullscreen||el.webkitRequestFullscreen).call(el); }
-  else{ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
-};
-document.getElementById('btnA').onclick=()=>pulse('A');
-document.getElementById('btnB').onclick=()=>pulse('B');
-function pulse(which){ // tiny feedback + placeholder action
-  if(soundOn) beep(which==='A'?660:440, 0.05);
-}
-
-/* ---------- Tiny audio beep ---------- */
-let actx;
-function beep(freq=440, dur=0.07){
-  actx = actx || new (window.AudioContext||window.webkitAudioContext)();
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type='sine'; o.frequency.value=freq;
-  o.connect(g); g.connect(actx.destination);
-  g.gain.setValueAtTime(0.0001, actx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.2, actx.currentTime+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
-  o.start(); o.stop(actx.currentTime+dur+0.02);
-}
-
-/* ---------- Rendering helpers ---------- */
-const skyGrad = ()=> {
-  const g = ctx.createLinearGradient(0,0,0,canvas.height/DPR);
-  const t = (Date.now()/1000)%20; // day-night cycle
-  const k = Math.abs((t-10)/10);   // 0..1..0
-  const top = `hsl(${210+40*k}deg 60% ${12+10*k}%)`;
-  const bot = `hsl(${220}deg 60% ${8+5*k}%)`;
-  g.addColorStop(0, top);
-  g.addColorStop(1, bot);
-  return g;
-};
-function drawParallax(){
-  // distant stars/clouds
-  ctx.fillStyle = skyGrad();
-  ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR);
-  ctx.save();
-  ctx.globalAlpha = .25;
-  ctx.fillStyle = '#fff';
-  for(let i=0;i<80;i++){
-    const x=((i*97)%1200)- (cam.x*0.2 % 1200);
-    const y=((i*53)%600) + 30*Math.sin((i*13)+Date.now()*0.0003);
-    ctx.fillRect((x%1200)-10,(y%700),2,2);
+  // ---------- Equipment System ----------
+  class EquipmentSystem{
+    constructor(tiers, items, progression){
+      this.tiers=tiers; this.items=items; this.progression=progression;
+      this.levels={ sword:1, shield:1, armor:1 }; this.shards=0; this.chapterIndex=0;
+      this.load();
+    }
+    maxAllowedTier(){ const ch=this.progression.chapters[this.chapterIndex]; return ch?.unlocks?.maxTier||1; }
+    canUpgrade(slot){ const next=this.levels[slot]+1; return next<=Math.min(7,this.maxAllowedTier()); }
+    upgradeCost(slot){ return 10*(this.levels[slot]+1); }
+    tryUpgrade(slot){
+      if(!this.canUpgrade(slot)) return {ok:false, reason:'Locked by chapter'};
+      const cost=this.upgradeCost(slot); if(this.shards<cost) return {ok:false, reason:'Not enough Shards'};
+      this.shards-=cost; this.levels[slot]++; this.save(); return {ok:true};
+    }
+    cycle(slot){ this.levels[slot]=this.levels[slot]%7+1; this.save(); }
+    getAttack(){ const s=this.items.swords.find(x=>x.level===this.levels.sword); const a=this.items.armors.find(x=>x.level===this.levels.armor); return Math.round((s?.attack||1)+(a?.attack_bonus||0)); }
+    getDefense(){ const sh=this.items.shields.find(x=>x.level===this.levels.shield); const a=this.items.armors.find(x=>x.level===this.levels.armor); return Math.round((sh?.defense||0)+(a?.defense_bonus||0)); }
+    getEquippedNames(){
+      const sword=this.items.swords.find(x=>x.level===this.levels.sword)?.name||'Sword Lv1';
+      const shield=this.items.shields.find(x=>x.level===this.levels.shield)?.name||'Shield Lv1';
+      const armor=this.items.armors.find(x=>x.level===this.levels.armor)?.name||'Armor Lv1';
+      return {sword,shield,armor};
+    }
+    addShards(n){ this.shards+=n; this.save(); }
+    nextChapter(){ if(this.chapterIndex<this.progression.chapters.length-1){ this.chapterIndex++; this.save(); return true;} return false; }
+    save(){ localStorage.setItem('rf_save', JSON.stringify({levels:this.levels, shards:this.shards, chapterIndex:this.chapterIndex})); }
+    load(){ try{ const raw=localStorage.getItem('rf_save'); if(!raw) return; const d=JSON.parse(raw); this.levels=d.levels||this.levels; this.shards=d.shards||0; this.chapterIndex=d.chapterIndex||0; }catch(e){} }
+    reset(){ localStorage.removeItem('rf_save'); this.levels={sword:1,shield:1,armor:1}; this.shards=0; this.chapterIndex=0; }
   }
-  ctx.restore();
-}
-function drawTile(x,y,t){
-  const px = Math.floor(x*TS - cam.x), py = Math.floor(y*TS - cam.y);
-  if(px<-TS || py<-TS || px>canvas.width/DPR || py>canvas.height/DPR) return;
-  // base color
-  let col='#1b2136';
-  if(t===0) col='#13262e';           // grass
-  if(t===1) col='#3b2f22';           // dirt
-  if(t===2) col='#0c1e3c';           // water
-  if(t===3) col='#3a3323';           // sand
-  if(t===4) col='#2a2d37';           // rock
-  // rounded tile
-  const r=6;
-  ctx.fillStyle=col;
-  roundRect(px+1,py+1,TS-2,TS-2,r,true,false);
-  // subtle highlight
-  ctx.strokeStyle='rgba(255,255,255,.04)';
-  ctx.lineWidth=1;
-  ctx.strokeRect(px+1.5,py+1.5,TS-3,TS-3);
-}
-function roundRect(x,y,w,h,r,fill,stroke){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
-  if(fill) ctx.fill();
-  if(stroke) ctx.stroke();
-}
-function drawTree(tx,ty){
-  const x = tx*TS - cam.x + TS/2, y = ty*TS - cam.y + TS/2;
-  if(x<-40||y<-40||x>canvas.width/DPR+40||y>canvas.height/DPR+40) return;
-  ctx.save();
-  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=10;
-  ctx.fillStyle='#1b7d5c';
-  ctx.beginPath(); ctx.arc(x,y-6,12,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#0e5a41'; ctx.beginPath(); ctx.arc(x-8,y-6,8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#1c2a1f'; roundRect(x-2,y+2,4,10,2,true,false);
-  ctx.restore();
-}
-function drawStone(tx,ty){
-  const x = tx*TS - cam.x + TS/2, y = ty*TS - cam.y + TS/2;
-  if(x<-40||y<-40||x>canvas.width/DPR+40||y>canvas.height/DPR+40) return;
-  ctx.save();
-  ctx.fillStyle='#6f7a8a';
-  roundRect(x-8,y-6,16,12,4,true,false);
-  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.strokeRect(x-8.5,y-6.5,17,13);
-  ctx.restore();
-}
 
-/* ---------- Game loop ---------- */
-let last=0;
-function step(t){
-  const dt = Math.min(33,(t-last)||16)/16.666; last=t;
-  update(dt); render();
-  requestAnimationFrame(step);
-}
-requestAnimationFrame(step);
+  // ---------- Gamepad helper ----------
+  const GP={connected:false,index:null,name:'None',axes:[0,0,0,0],buttons:[],
+    update(){
+      const pads = navigator.getGamepads?navigator.getGamepads():[];
+      const gp = (pads && pads[this.index]) || [...pads].find(p=>p);
+      if(!gp){ this.connected=false; this.name='None'; return; }
+      this.connected=true; this.index=gp.index; this.name=gp.id||'Gamepad';
+      this.axes = gp.axes ? gp.axes.slice(0,4) : [0,0,0,0];
+      this.buttons = gp.buttons ? gp.buttons.map(b=>b.pressed) : [];
+    }
+  };
+  window.addEventListener('gamepadconnected', e=>{ GP.connected=true; GP.index=e.gamepad.index; GP.name=e.gamepad.id; renderGP(); });
+  window.addEventListener('gamepaddisconnected', ()=>{ GP.connected=false; GP.index=null; GP.name='None'; renderGP(); });
+  function renderGP(){ document.getElementById('gp').innerHTML='Gamepad: <strong>'+ (GP.connected?GP.name:'None') +'</strong>'; }
 
-function update(dt){
-  // input vector
-  let ax = (keys['arrowright']||keys['d']?1:0) - (keys['arrowleft']||keys['a']?1:0) + joyVec.x;
-  let ay = (keys['arrowdown']||keys['s']?1:0) - (keys['arrowup']||keys['w']?1:0) + joyVec.y;
-  const mag = Math.hypot(ax,ay);
-  if(mag>1) {ax/=mag; ay/=mag;}
-  player.vx = ax * player.speed;
-  player.vy = ay * player.speed;
-  if(Math.abs(ax)>0.01) player.facing = Math.sign(ax);
-  // movement with simple collision vs water & rocks
-  const nx = clamp(player.x + player.vx*dt, 1, W-2);
-  const ny = clamp(player.y + player.vy*dt, 1, H-2);
-  const tile = (x,y)=>world[(y|0)*W + (x|0)];
-  const passable = (t)=> t!==2 && t!==4;
-  if(passable(tile(nx, player.y))) player.x = nx;
-  if(passable(tile(player.x, ny))) player.y = ny;
-  // camera follows with smoothing
-  cam.x += ((player.x*TS - (canvas.width/DPR)/2) - cam.x) * 0.12;
-  cam.y += ((player.y*TS - (canvas.height/DPR)/2) - cam.y) * 0.12;
-}
+  // ---------- Procedural Pixel Art ----------
+  function makeTexture(scene, key, w, h, paint){
+    const rt = scene.make.renderTexture({width:w,height:h,add:false});
+    const ctx = rt.context;
+    paint(ctx, w, h);
+    rt.saveTexture(key);
+    rt.destroy();
+  }
+  function rand(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
 
-function render(){
-  drawParallax();
-  // light vignette
-  const g = ctx.createRadialGradient(
-    (player.x*TS - cam.x), (player.y*TS - cam.y), 40,
-    (player.x*TS - cam.x), (player.y*TS - cam.y), 600
-  );
-  g.addColorStop(0,'rgba(0,0,0,0)');
-  g.addColorStop(1,'rgba(0,0,0,0.18)');
-  // draw tiles in view
-  const sx = Math.floor(cam.x/TS)-1, sy = Math.floor(cam.y/TS)-1;
-  const ex = sx + Math.ceil(canvas.width/(DPR*TS))+3;
-  const ey = sy + Math.ceil(canvas.height/(DPR*TS))+3;
-  for(let y=sy;y<ey;y++){
-    for(let x=sx;x<ex;x++){
-      if(x<0||y<0||x>=W||y>=H) continue;
-      drawTile(x,y,world[y*W+x]);
+  // ---------- Scenes ----------
+  class BootScene extends Phaser.Scene{
+    constructor(){ super('Boot'); }
+    preload(){
+      // Player (simple pixel hero with visor)
+      makeTexture(this, 'player', 28, 28, (ctx,w,h)=>{
+        ctx.fillStyle='#1e88e5'; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle='#0d47a1'; ctx.fillRect(2,2,w-4,h-4);
+        ctx.fillStyle='#90caf9'; ctx.fillRect(6,8,w-12,6);
+        ctx.fillStyle='#263238'; ctx.fillRect(10,18,8,6);
+      });
+      // Slime enemy
+      makeTexture(this, 'slime', 26, 22, (ctx,w,h)=>{
+        ctx.fillStyle='#8bc34a'; ctx.fillRect(0,2,w,h-2);
+        ctx.fillStyle='#558b2f'; ctx.fillRect(2,4,w-4,h-6);
+        ctx.fillStyle='#c5e1a5'; ctx.fillRect(6,6,w-12,6);
+      });
+      // Boss
+      makeTexture(this, 'boss', 42, 42, (ctx,w,h)=>{
+        ctx.fillStyle='#ff7043'; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle='#bf360c'; ctx.fillRect(3,3,w-6,h-6);
+        ctx.fillStyle='#ffccbc'; ctx.fillRect(10,10,w-20,10);
+        ctx.fillStyle='#3e2723'; ctx.fillRect(14,24,w-28,10);
+      });
+      // Grass tile
+      makeTexture(this, 't_grass', 32, 32, (ctx,w,h)=>{
+        ctx.fillStyle='#2e7d32'; ctx.fillRect(0,0,w,h);
+        for(let i=0;i<80;i++){ ctx.fillStyle= (i%3? '#388e3c':'#1b5e20'); ctx.fillRect(rand(0,31), rand(0,31), 1, 1); }
+      });
+      // Path tile
+      makeTexture(this, 't_path', 32, 32, (ctx,w,h)=>{
+        ctx.fillStyle='#8d6e63'; ctx.fillRect(0,0,w,h);
+        for(let i=0;i<60;i++){ ctx.fillStyle= (i%2? '#6d4c41':'#a1887f'); ctx.fillRect(rand(0,31), rand(0,31), 1, 1); }
+      });
+      // Water tile
+      makeTexture(this, 't_water', 32, 32, (ctx,w,h)=>{
+        ctx.fillStyle='#1565c0'; ctx.fillRect(0,0,w,h);
+        for(let i=0;i<80;i++){ ctx.fillStyle= (i%2? '#42a5f5':'#0d47a1'); ctx.fillRect(rand(0,31), rand(0,31), 1, 1); }
+      });
+      // Tree obstacle
+      makeTexture(this, 't_tree', 32, 40, (ctx,w,h)=>{
+        ctx.fillStyle='#1b5e20'; ctx.fillRect(0,0,w,28);
+        ctx.fillStyle='#2e7d32'; ctx.fillRect(2,2,w-4,24);
+        ctx.fillStyle='#4e342e'; ctx.fillRect(12,28,8,12);
+      });
+      // Wall (dungeon)
+      makeTexture(this, 't_wall', 32, 32, (ctx,w,h)=>{
+        ctx.fillStyle='#37474f'; ctx.fillRect(0,0,w,h);
+        for(let i=0;i<60;i++){ ctx.fillStyle=(i%2?'#263238':'#455a64'); ctx.fillRect(rand(0,31), rand(0,31),1,1); }
+      });
+      // Floor (dungeon)
+      makeTexture(this, 't_floor', 32, 32, (ctx,w,h)=>{
+        ctx.fillStyle='#616161'; ctx.fillRect(0,0,w,h);
+        for(let i=0;i<50;i++){ ctx.fillStyle=(i%2?'#757575':'#424242'); ctx.fillRect(rand(0,31), rand(0,31),1,1); }
+      });
+      // Portal / door
+      makeTexture(this, 't_portal', 32, 32, (ctx,w,h)=>{
+        ctx.fillStyle='#6a1b9a'; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle='#ab47bc'; ctx.fillRect(4,4,w-8,h-8);
+      });
+      // Forge
+      makeTexture(this, 'forge', 36, 36, (ctx,w,h)=>{
+        ctx.fillStyle='#f57c00'; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle='#ffb74d'; ctx.fillRect(6,6,w-12,h-12);
+      });
+      // NPC
+      makeTexture(this, 'npc', 28, 28, (ctx,w,h)=>{
+        ctx.fillStyle='#7e57c2'; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle='#b39ddb'; ctx.fillRect(4,6,w-8,8);
+      });
+    }
+    create(){ this.scene.start('World', { mapId:'overworld', spawn:{x:160,y:320} }); }
+  }
+
+  // ---------- Maps ----------
+  // 0 empty/grass, 1 path/floor, 2 water, 3 tree, 4 portal, 5 wall, 6 dungeon floor
+  const MAPS = {
+    overworld: {
+      tile: 32, cols: 30, rows: 18,
+      data: (function(){
+        const rows=18, cols=30, t=[];
+        for(let y=0;y<rows;y++){ const row=[]; for(let x=0;x<cols;x++){ row.push(0);} t.push(row); }
+        // lake
+        for(let y=4;y<9;y++){ for(let x=18;x<27;x++){ t[y][x]=2; } }
+        // path
+        for(let x=4;x<26;x++){ t[10][x]=1; }
+        for(let y=6;y<14;y++){ t[y][8]=1; }
+        // trees border
+        for(let x=0;x<30;x++){ t[0][x]=3; t[17][x]=3; }
+        for(let y=0;y<18;y++){ t[y][0]=3; t[y][29]=3; }
+        // portals
+        t[10][25]=4; // to dungeon entrance
+        return t;
+      })(),
+      portals:[ {x:25,y:10,to:'dungeon',toPos:{x:64,y:64}} ],
+      forge:{x:6*32+16,y:10*32+16},
+      npc:{x:12*32+16,y:10*32+16},
+      enemies:[ {x:20*32+16,y:8*32+16}, {x:23*32+16,y:12*32+16} ]
+    },
+    dungeon: {
+      tile:32, cols:22, rows:14,
+      data:(function(){
+        const r=14, c=22, t=[];
+        for(let y=0;y<r;y++){ const row=[]; for(let x=0;x<c;x++){ row.push(6);} t.push(row); }
+        // walls ring
+        for(let x=0;x<c;x++){ t[0][x]=5; t[r-1][x]=5; }
+        for(let y=0;y<r;y++){ t[y][0]=5; t[y][c-1]=5; }
+        // inner walls
+        for(let x=2;x<20;x++){ t[4][x]=5; }
+        for(let y=6;y<12;y++){ t[y][10]=5; }
+        // portal to boss
+        t[12][20]=4;
+        // portal back to overworld
+        t[1][1]=4;
+        return t;
+      })(),
+      portals:[
+        {x:20,y:12,to:'boss',toPos:{x:320,y:240}},
+        {x:1,y:1,to:'overworld',toPos:{x:25*32+16,y:10*32+16}}
+      ],
+      forge:null, npc:null,
+      enemies:[ {x:8*32+16,y:8*32+16}, {x:15*32+16,y:3*32+16}, {x:6*32+16,y:11*32+16} ]
+    },
+    boss: {
+      tile:32, cols:20, rows:14,
+      data:(function(){
+        const r=14,c=20,t=[];
+        for(let y=0;y<r;y++){ const row=[]; for(let x=0;x<c;x++){ row.push(6);} t.push(row); }
+        for(let x=0;x<c;x++){ t[0][x]=5; t[r-1][x]=5; }
+        for(let y=0;y<r;y++){ t[y][0]=5; t[y][c-1]=5; }
+        // center motif
+        for(let y=6;y<=7;y++){ for(let x=8;x<=11;x++){ t[y][x]=1; } }
+        // portal back
+        t[12][2]=4;
+        return t;
+      })(),
+      portals:[ {x:2,y:12,to:'dungeon',toPos:{x:64,y:64}} ],
+      forge:null, npc:null,
+      enemies:[]
+    }
+  };
+
+  function tileKey(code){
+    switch(code){
+      case 0: return 't_grass';
+      case 1: return 't_path';
+      case 2: return 't_water';
+      case 3: return 't_tree';
+      case 4: return 't_portal';
+      case 5: return 't_wall';
+      case 6: return 't_floor';
+      default: return 't_grass';
     }
   }
-  // objects
-  trees.forEach(o=>drawTree(o.x,o.y));
-  stones.forEach(o=>drawStone(o.x,o.y));
-  // player (rounded capsule)
-  const px = Math.floor(player.x*TS - cam.x);
-  const py = Math.floor(player.y*TS - cam.y);
-  ctx.save();
-  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=12;
-  ctx.fillStyle='#58b3ff';
-  roundRect(px-10,py-14,20,28,10,true,false);
-  // face
-  ctx.fillStyle='#0b1b2b'; roundRect(px-6,py-6,12,8,3,true,false);
-  // little nose to show facing
-  ctx.fillStyle='#9ad1ff'; ctx.fillRect(px+(player.facing>0?3:-5),py-2,2,2);
-  ctx.restore();
-  // vignette overlay
-  ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR);
-  // HUD
-  ctx.fillStyle='rgba(0,0,0,.35)';
-  ctx.fillRect(10, canvas.height/DPR-28, 150, 20);
-  ctx.fillStyle='#9ad1ff';
-  ctx.fillText('HP: ♥♥♥♥♥', 16, canvas.height/DPR-14);
-}
+  function isSolid(code){
+    return (code===2 || code===3 || code===5); // water/tree/wall are solid
+  }
 
-/* Prevent iOS scroll on canvas */
-document.addEventListener('gesturestart', e=>e.preventDefault());
-</script>
+  class WorldScene extends Phaser.Scene{
+    constructor(){ super('World'); }
+    init(data){ this.mapId=data.mapId||'overworld'; this.spawn=data.spawn||{x:160,y:320}; }
+    create(){
+      this.equipment = new EquipmentSystem(TIERS, ITEMS, PROGRESSION);
+      this.hp=100; this.maxHp=100; this.invuln=0; this.blocking=false;
+      this.statsEl=document.getElementById('stats');
+      this.panel=document.getElementById('panel');
+      this.panelTitle=document.getElementById('panelTitle');
+      this.panelText=document.getElementById('panelText');
+      this.panelBtns=document.getElementById('panelBtns');
+
+      this.cursors=this.input.keyboard.createCursorKeys();
+      this.keys=this.input.keyboard.addKeys('W,A,S,D,J,K,L,U,I,O,E');
+
+      this.loadMap(this.mapId);
+
+      this.player=this.physics.add.image(this.spawn.x, this.spawn.y, 'player').setDepth(10);
+      this.player.setCollideWorldBounds(true); this.player.speed=180;
+
+      this.cameras.main.setBounds(0,0,this.worldW,this.worldH);
+      this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+
+      // enemies group
+      this.enemiesGroup = this.physics.add.group();
+      for(const e of this.mapDef.enemies||[]){
+        const mob=this.physics.add.image(e.x, e.y, 'slime'); mob.hp=35; mob.setDepth(9);
+        this.enemiesGroup.add(mob);
+      }
+      // boss
+      if(this.mapId==='boss'){
+        this.boss=this.physics.add.image(this.worldW/2, this.worldH/2, 'boss'); this.boss.hp=220;
+        this.boss.setDepth(9);
+      }
+
+      // solid tile bodies
+      this.solidBodies=this.physics.add.staticGroup();
+      for(let y=0;y<this.rows;y++){
+        for(let x=0;x<this.cols;x++){
+          if(isSolid(this.map[y][x])){
+            const b=this.solidBodies.create(x*this.tile + this.tile/2, y*this.tile + this.tile/2, null);
+            b.body.setSize(this.tile, this.tile);
+            b.setVisible(false);
+          }
+        }
+      }
+      this.physics.add.collider(this.player, this.solidBodies);
+
+      // interactives
+      if(this.mapDef.forge){
+        this.forge=this.physics.add.staticImage(this.mapDef.forge.x, this.mapDef.forge.y, 'forge').setDepth(9);
+        this.physics.add.collider(this.player, this.forge);
+      }
+      if(this.mapDef.npc){
+        this.npc=this.physics.add.staticImage(this.mapDef.npc.x, this.mapDef.npc.y, 'npc').setDepth(9);
+        this.physics.add.collider(this.player, this.npc);
+      }
+
+      // overlaps with enemies
+      this.physics.add.overlap(this.player, this.enemiesGroup, ()=>{
+        if(!this.blocking){ const dmg=Math.max(1, 8 - this.equipment.getDefense()); this.takeDamage(dmg); }
+      });
+      // boss overlap
+      if(this.boss){
+        this.physics.add.overlap(this.player, this.boss, ()=>{
+          if(!this.blocking){ const dmg=Math.max(1, 14 - this.equipment.getDefense()); this.takeDamage(dmg); }
+        });
+      }
+
+      this.updateHUD();
+    }
+
+    loadMap(mapId){
+      this.mapId=mapId;
+      this.mapDef=MAPS[mapId];
+      this.tile=this.mapDef.tile; this.cols=this.mapDef.cols; this.rows=this.mapDef.rows;
+      this.map=this.mapDef.data;
+      this.worldW=this.cols*this.tile; this.worldH=this.rows*this.tile;
+
+      // render tiles
+      this.add.rectangle(this.worldW/2, this.worldH/2, this.worldW, this.worldH, 0x0e1116).setDepth(0);
+      for(let y=0;y<this.rows;y++){
+        for(let x=0;x<this.cols;x++){
+          const code=this.map[y][x];
+          const key=tileKey(code);
+          this.add.image(x*this.tile, y*this.tile, key).setOrigin(0).setDepth(1);
+        }
+      }
+      // portals dictionary
+      this.portals = {};
+      for(const p of this.mapDef.portals||[]){
+        this.portals[p.y+','+p.x] = p;
+      }
+    }
+
+    openPanel(title, text, buttons){
+      this.panelTitle.innerText=title;
+      this.panelText.innerText=text;
+      this.panelBtns.innerHTML='';
+      for(const b of buttons){
+        const el=document.createElement('button');
+        el.innerText=b.label; el.disabled=!!b.disabled;
+        el.onclick=()=>{ this.closePanel(); b.onClick && b.onClick(); };
+        this.panelBtns.appendChild(el);
+      }
+      this.panel.style.display='block';
+    }
+    closePanel(){ this.panel.style.display='none'; }
+
+    gotoMap(id, spawn){
+      this.scene.restart({ mapId:id, spawn });
+    }
+
+    update(_, dt){
+      GP.update(); renderGP();
+      const delta=dt/1000; this.invuln=Math.max(0, this.invuln - delta);
+
+      // movement
+      let vx=0, vy=0;
+      if(this.cursors.left.isDown || this.keys.A.isDown) vx=-1;
+      else if(this.cursors.right.isDown || this.keys.D.isDown) vx=1;
+      if(this.cursors.up.isDown || this.keys.W.isDown) vy=-1;
+      else if(this.cursors.down.isDown || this.keys.S.isDown) vy=1;
+      if(GP.connected){
+        const ax=GP.axes[0]||0, ay=GP.axes[1]||0;
+        if(Math.abs(ax)>0.25) vx=ax;
+        if(Math.abs(ay)>0.25) vy=ay;
+        if(GP.buttons[14]) vx=-1; if(GP.buttons[15]) vx=1;
+        if(GP.buttons[12]) vy=-1; if(GP.buttons[13]) vy=1;
+      }
+      const len=Math.hypot(vx,vy)||1;
+      this.player.setVelocity((vx/len)*this.player.speed, (vy/len)*this.player.speed);
+
+      // actions
+      const justJ=Phaser.Input.Keyboard.JustDown(this.keys.J);
+      const justL=Phaser.Input.Keyboard.JustDown(this.keys.L);
+      const justE=Phaser.Input.Keyboard.JustDown(this.keys.E);
+      this.blocking=this.keys.K.isDown || (GP.connected && GP.buttons[1]);
+
+      const atkBtn = GP.connected && GP.buttons[0];
+      const dashBtn = GP.connected && GP.buttons[2];
+      const interactBtn = GP.connected && GP.buttons[3];
+
+      if(justJ || atkBtn){
+        const damage=this.equipment.getAttack();
+        // mobs
+        this.enemiesGroup.children.iterate(m=>{
+          if(m && m.active && Phaser.Math.Distance.BetweenPoints(this.player, m)<46){
+            m.hp -= damage;
+            if(m.hp<=0){ this.dropShards(Phaser.Math.Between(2,5)); m.destroy(); this.updateHUD(); }
+          }
+        });
+        // boss
+        if(this.boss && this.boss.active && Phaser.Math.Distance.BetweenPoints(this.player, this.boss)<56){
+          this.boss.hp -= damage;
+          if(this.boss.hp<=0){
+            this.dropShards(Phaser.Math.Between(40,70));
+            this.boss.destroy();
+            this.equipment.nextChapter();
+            this.updateHUD();
+            this.openPanel('Victory!', 'The Gilded Warden falls. Your legend grows.', [
+              {label:'Back to Dungeon', onClick:()=> this.gotoMap('dungeon', {x:64,y:64})}
+            ]);
+          }
+        }
+      }
+
+      if(justL || dashBtn){
+        const v=this.player.body.velocity; const mag=Math.hypot(v.x,v.y)||1;
+        this.player.x += (v.x/mag)*52; this.player.y += (v.y/mag)*52;
+      }
+
+      if(justE || interactBtn){
+        if(this.forge && Phaser.Math.Distance.BetweenPoints(this.player, this.forge)<60){ this.openForge(); }
+        else if(this.npc && Phaser.Math.Distance.BetweenPoints(this.player, this.npc)<60){ this.openNPC(); }
+        else {
+          // check portal underfoot
+          const tx = Math.floor(this.player.x/this.tile);
+          const ty = Math.floor(this.player.y/this.tile);
+          const key = ty+','+tx;
+          if(this.portals[key]){
+            const p=this.portals[key];
+            this.gotoMap(p.to, p.toPos);
+          }
+        }
+      }
+
+      // dev tier cycle
+      if(Phaser.Input.Keyboard.JustDown(this.keys.U) || (GP.connected && GP.buttons[4])){ this.equipment.cycle('sword'); this.updateHUD(); }
+      if(Phaser.Input.Keyboard.JustDown(this.keys.I) || (GP.connected && GP.buttons[5])){ this.equipment.cycle('shield'); this.updateHUD(); }
+      if(Phaser.Input.Keyboard.JustDown(this.keys.O) || (GP.connected && (GP.buttons[6]||GP.buttons[7]))){ this.equipment.cycle('armor'); this.updateHUD(); }
+
+      // simple enemy AI
+      this.enemiesGroup.children.iterate(m=>{
+        if(!m || !m.active) return;
+        const ang=Phaser.Math.Angle.Between(m.x,m.y,this.player.x,this.player.y);
+        m.setVelocity(Math.cos(ang)*60, Math.sin(ang)*60);
+      });
+
+      // boss AI: slow chase + bursts
+      if(this.boss && this.boss.active){
+        if(!this.boss.cool) this.boss.cool=0;
+        this.boss.cool -= delta;
+        const ang=Phaser.Math.Angle.Between(this.boss.x,this.boss.y,this.player.x,this.player.y);
+        const speed=(this.boss.cool>0)?200:80;
+        this.boss.setVelocity(Math.cos(ang)*speed, Math.sin(ang)*speed);
+        if(this.boss.cool<=0 && Phaser.Math.Distance.BetweenPoints(this.boss, this.player)<180){
+          this.boss.cool=2.5; // burst cooldown
+        }
+      }
+    }
+
+    dropShards(n){ this.equipment.addShards(n); }
+    openForge(){
+      const canW=this.equipment.canUpgrade('sword'), canS=this.equipment.canUpgrade('shield'), canA=this.equipment.canUpgrade('armor');
+      const cw=this.equipment.upgradeCost('sword'), cs=this.equipment.upgradeCost('shield'), ca=this.equipment.upgradeCost('armor');
+      this.openPanel('Forge', 'Spend Shards to upgrade gear (capped by your current chapter).', [
+        {label:\`Upgrade Sword (\${cw})\`, disabled:!canW || this.equipment.shards<cw, onClick:()=>{ this.equipment.tryUpgrade('sword'); this.updateHUD(); }},
+        {label:\`Upgrade Shield (\${cs})\`, disabled:!canS || this.equipment.shards<cs, onClick:()=>{ this.equipment.tryUpgrade('shield'); this.updateHUD(); }},
+        {label:\`Upgrade Armor (\${ca})\`, disabled:!canA || this.equipment.shards<ca, onClick:()=>{ this.equipment.tryUpgrade('armor'); this.updateHUD(); }},
+        {label:'Close', onClick:()=>{} }
+      ]);
+    }
+    openNPC(){
+      const ch=this.equipment.progression.chapters[this.equipment.chapterIndex];
+      const more=(this.equipment.chapterIndex < this.equipment.progression.chapters.length-1);
+      this.openPanel('Traveler', \`"\${ch.name}" — Goal: \${ch.goal}\`, [
+        {label: more ? 'Mark Chapter Complete' : 'You are the Champion!', disabled:!more, onClick:()=>{ this.equipment.nextChapter(); this.updateHUD(); }},
+        {label:'Reset Save', onClick:()=>{ this.equipment.reset(); this.updateHUD(); }},
+        {label:'Close', onClick:()=>{} }
+      ]);
+    }
+
+    takeDamage(amount){
+      if(this.invuln>0) return;
+      this.hp=Math.max(0, this.hp - amount); this.invuln=0.5;
+      this.player.setTint(0xff7777); this.time.delayedCall(120, ()=>this.player.clearTint());
+      this.updateHUD();
+    }
+
+    updateHUD(){
+      const gear=this.equipment.getEquippedNames();
+      const stats={ attack:this.equipment.getAttack(), defense:this.equipment.getDefense(), hp:\`\${this.hp}/\${this.maxHp}\`, shards:this.equipment.shards, cap:this.equipment.maxAllowedTier() };
+      const ch=this.equipment.progression.chapters[this.equipment.chapterIndex];
+      this.statsEl.innerHTML = `
+        <div class="row">
+          <div>Weapon: <strong>${gear.sword}</strong></div>
+          <div>Shield: <strong>${gear.shield}</strong></div>
+          <div>Armor: <strong>${gear.armor}</strong></div>
+        </div>
+        <div class="row">
+          <div>ATK: <strong>${stats.attack}</strong></div>
+          <div>DEF: <strong>${stats.defense}</strong></div>
+          <div>HP: <strong>${stats.hp}</strong></div>
+          <div>Shards: <strong>${stats.shards}</strong></div>
+          <div>Tier Cap: <strong>${stats.cap}</strong></div>
+        </div>
+        <div class="row">
+          <div>Chapter: <strong>${ch.name}</strong> — Goal: <strong>${ch.goal}</strong></div>
+          <div>Map: <strong>${this.mapId}</strong></div>
+        </div>`;
+    }
+  }
+
+  const config={ type:Phaser.AUTO, width:960, height:540, parent:'game', backgroundColor:'#0d1117',
+    physics:{ default:'arcade', arcade:{ gravity:{y:0}, debug:false } },
+    scene:[BootScene, WorldScene]
+  };
+  new Phaser.Game(config);
+  </script>
 </body>
 </html>

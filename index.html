@@ -3,28 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Roberto Fantasy — Modern 2D (HD Procedural)</title>
+<title>Roberto Fantasy — 2D Procedural (Red Elf + Laser Sword)</title>
 <style>
-:root{--ui:#e8eef7}
+:root{--ui:#e8eef7;--panel:rgba(10,12,15,.6);--accent:#ff4a57;--gold:#e7c766}
 html,body{height:100%;margin:0;background:#14161a;color:var(--ui);font:600 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
 #wrap{height:100%;display:flex;flex-direction:column}
-#hud{position:fixed;left:16px;top:12px;background:rgba(10,12,15,.6);backdrop-filter:blur(6px);
-padding:10px 14px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+#hud{position:fixed;left:12px;top:10px;background:var(--panel);backdrop-filter:blur(6px);
+padding:8px 12px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.35);display:flex;gap:10px;align-items:center}
+#hud .hpbar{width:160px;height:10px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden}
+#hud .hpfill{height:100%;background:linear-gradient(90deg,#36d399,#22c55e);width:100%}
 #hud b{color:#9ad1ff}
 #game{flex:1;display:flex;align-items:center;justify-content:center}
-canvas{width:min(1100px,100vw);height:min(700px,100vh);image-rendering:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.55)}
-.hint{position:fixed;right:14px;bottom:10px;opacity:.8}
+canvas{width:min(1100px,100vw);height:min(700px,100vh);image-rendering:auto;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.55);background:#0b0d10}
+.hint{position:fixed;right:12px;bottom:8px;opacity:.8}
+.badge{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.1);font-weight:700}
+kbd{background:rgba(255,255,255,.1);padding:1px 5px;border-radius:6px}
 </style>
 </head>
 <body>
 <div id="wrap">
-<div id="hud">Roberto Fantasy — <b>Modern 2D</b> • Move: WASD/Arrows • Dash: Shift • Attack: K • Menu: P</div>
-<div id="game"><canvas id="cv" width="1280" height="720"></canvas></div>
-<div class="hint">© You • No external art — procedural HD</div>
+  <div id="hud">
+    <span class="badge">Roberto Fantasy — <b>Red Elf</b></span>
+    <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
+    <span>Move <kbd>WASD/Arrows</kbd> • Dash <kbd>Shift</kbd> • Attack <kbd>K</kbd> • Laser <kbd>J</kbd> • Pause <kbd>P</kbd></span>
+  </div>
+  <div id="game"><canvas id="cv" width="1280" height="720"></canvas></div>
+  <div class="hint">Procedural world • No external assets • Laser-sword © You</div>
 </div>
 
 <script>
-/* ========= Core setup ========= */
+/* ========= Canvas ========= */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d',{alpha:false});
 const DPR = Math.min(2, window.devicePixelRatio || 1);
 cv.width = Math.round(cv.width * DPR); cv.height = Math.round(cv.height * DPR);
@@ -34,60 +42,61 @@ const rand = (a=1,b=0)=>Math.random()*(a-b)+b;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 
-/* Small value noise (fast, no deps) */
+/* Tiny value noise for terrain & materials */
 function makeNoise(size=256){
-const p = new Float32Array(size*size);
-for(let i=0;i<p.length;i++) p[i]=Math.random();
-const v=(x,y)=>p[((x&255)<<8)|(y&255)];
-return (x,y,oct=4)=>{ // fractal brownian
-let amp=1, freq=1, sum=0, norm=0;
-for(let i=0;i<oct;i++){
-const xi = Math.floor(x*freq), yi=Math.floor(y*freq);
-const xf = x*freq-xi, yf=y*freq-yi;
-// bilinear
-const a=v(xi,yi), b=v(xi+1,yi), c=v(xi,yi+1), d=v(xi+1,yi+1);
-const u = xf*xf*(3-2*xf), w = yf*yf*(3-2*yf);
-const n = lerp(lerp(a,b,u), lerp(c,d,u), w);
-sum += n*amp; norm+=amp; amp*=.5; freq*=2;
-}
-return sum/norm;
-};
+  const p = new Float32Array(size*size);
+  for(let i=0;i<p.length;i++) p[i]=Math.random();
+  const v=(x,y)=>p[((x&255)<<8)|(y&255)];
+  return (x,y,oct=4)=>{
+    let amp=1,freq=1,sum=0,norm=0;
+    for(let i=0;i<oct;i++){
+      const xi=Math.floor(x*freq), yi=Math.floor(y*freq);
+      const xf=x*freq-xi, yf=y*freq-yi;
+      const a=v(xi,yi), b=v(xi+1,yi), c=v(xi,yi+1), d=v(xi+1,yi+1);
+      const u=xf*xf*(3-2*xf), w=yf*yf*(3-2*yf);
+      const n=lerp(lerp(a,b,u), lerp(c,d,u), w);
+      sum+=n*amp; norm+=amp; amp*=.5; freq*=2;
+    }
+    return sum/norm;
+  };
 }
 const noise = makeNoise();
 
-/* ========= World (tile map) ========= */
-const T = 48; // tile size (px in world units)
-const MAP_W = 120, MAP_H = 120; // large world
-const map = new Uint8Array(MAP_W*MAP_H);
-// 0 = grass, 1 = path, 2 = water, 3 = tree
-
-function at(x,y){ return map[y*MAP_W+x]; }
-function set(x,y,v){ map[y*MAP_W+x]=v; }
+/* ========= World ========= */
+const T = 48; // world tile px
+const MAP_W = 120, MAP_H = 120;
+const map = new Uint8Array(MAP_W*MAP_H); // 0 grass,1 path,2 water,3 tree,4 rock small
+const at = (x,y)=>map[y*MAP_W+x];
+const set = (x,y,v)=>{ map[y*MAP_W+x]=v; };
 
 function genWorld(){
-// base grass
-for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++) set(x,y,0);
-// rivers (noise threshold)
-for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++){
-const n = noise(x*0.06,y*0.06,5);
-if(n<0.38) set(x,y,2);
-}
-// paths (simple road grid)
-for(let y=8;y<MAP_H;y+=16) for(let x=0;x<MAP_W;x++) if(at(x,y)!==2) set(x,y,1);
-for(let x=6;x<MAP_W;x+=18) for(let y=0;y<MAP_H;y++) if(at(x,y)!==2) set(x,y,1);
-
-// trees sprinkled on grass
-for(let i=0;i<1400;i++){
-const x=(Math.random()*MAP_W)|0, y=(Math.random()*MAP_H)|0;
-if(at(x,y)===0 && noise(x*0.2,y*0.2)>0.52) set(x,y,3);
-}
+  for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++) set(x,y,0);
+  // rivers
+  for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++){
+    const n = noise(x*0.06,y*0.06,5);
+    if(n<0.38) set(x,y,2);
+  }
+  // paths grid
+  for(let y=8;y<MAP_H;y+=16) for(let x=0;x<MAP_W;x++) if(at(x,y)!==2) set(x,y,1);
+  for(let x=6;x<MAP_W;x+=18) for(let y=0;y<MAP_H;y++) if(at(x,y)!==2) set(x,y,1);
+  // trees
+  for(let i=0;i<1400;i++){
+    const x=(Math.random()*MAP_W)|0, y=(Math.random()*MAP_H)|0;
+    if(at(x,y)===0 && noise(x*0.2,y*0.2)>0.53) set(x,y,3);
+  }
+  // rocks
+  for(let i=0;i<800;i++){
+    const x=(Math.random()*MAP_W)|0, y=(Math.random()*MAP_H)|0;
+    if(at(x,y)===0 && noise(x*0.4+99,y*0.4+22)>0.62) set(x,y,4);
+  }
 }
 genWorld();
 
-/* ========= Player ========= */
+/* ========= Player (Red Elf) ========= */
 const player = {
-x: MAP_W*T*0.5, y: MAP_H*T*0.5,
-vx:0, vy:0, sp: 260, dashMult: 2.4, dash:0, face: 'down', anim:0, hp:100
+  x: MAP_W*T*0.5, y: MAP_H*T*0.5,
+  vx:0, vy:0, sp: 260, dashMult: 2.3,
+  face:'down', anim:0, hp:100, maxhp:100, invul:0
 };
 const keys = {};
 addEventListener('keydown',e=>{ keys[e.key]=true; });
@@ -96,210 +105,439 @@ addEventListener('keyup',e=>{ keys[e.key]=false; });
 /* ========= Camera ========= */
 const cam = { x: player.x, y: player.y };
 function camUpdate(dt){
-const ease = 1 - Math.pow(0.001, dt); // exponential smoothing
-cam.x = cam.x + (player.x - cam.x)*ease;
-cam.y = cam.y + (player.y - cam.y)*ease;
+  const ease = 1 - Math.pow(0.001, dt);
+  cam.x += (player.x - cam.x)*ease;
+  cam.y += (player.y - cam.y)*ease;
 }
 
-/* ========= Procedural materials ========= */
+/* ========= Materials ========= */
 const mat = {
-grass(x,y,t){
-// multi-layer green with subtle wind
-const g = 0.55 + 0.35*noise(x*0.06+Math.sin(t*.3)*.1, y*0.06+Math.cos(t*.2)*.1, 5);
-const d = 0.03 * noise(x*.8,y*.8,2);
-const r = 25+g*10, gr = 120+g*80, b = 40+g*35;
-return `rgb(${r|0},${gr|0},${(b+d*255)|0})`;
-},
-path(x,y){
-const n = noise(x*0.15,y*0.15,3);
-const c = 170 + n*40;
-return `rgb(${(c)|0},${(c-8)|0},${(c-16)|0})`;
-},
-water(x,y,t){
-const w1 = noise(x*0.08+ t*0.3, y*0.08+ t*0.25, 4);
-const w2 = noise(x*0.20- t*0.2, y*0.20+ t*0.22, 3);
-const n = (w1*0.7 + w2*0.3);
-const c = 130 + n*120;
-const b = 200 + n*40;
-return `rgb(${(40+n*40)|0},${(c)|0},${(b)|0})`;
-}
+  grass(x,y,t){
+    const g = 0.55 + 0.35*noise(x*0.06+Math.sin(t*.3)*.1, y*0.06+Math.cos(t*.2)*.1, 5);
+    const d = 0.03 * noise(x*.8,y*.8,2);
+    const r = 25+g*10, gr = 120+g*80, b = 40+g*35;
+    return `rgb(${r|0},${gr|0},${(b+d*255)|0})`;
+  },
+  path(x,y){
+    const n = noise(x*0.15,y*0.15,3);
+    const c = 170 + n*40;
+    return `rgb(${(c)|0},${(c-8)|0},${(c-16)|0})`;
+  },
+  water(x,y,t){
+    const w1 = noise(x*0.08+ t*0.3, y*0.08+ t*0.25, 4);
+    const w2 = noise(x*0.20- t*0.2, y*0.20+ t*0.22, 3);
+    const n = (w1*0.7 + w2*0.3);
+    const c = 130 + n*120;
+    const b = 200 + n*40;
+    return `rgb(${(40+n*40)|0},${(c)|0},${(b)|0})`;
+  },
+  rock(x,y){
+    const n = noise(x*0.6+3,y*0.6+7,3);
+    const c = 140 + n*55;
+    return `rgb(${c|0},${(c-10)|0},${(c-18)|0})`;
+  }
 };
 
-/* Pre-painted tile cache for speed */
+// tile cache
 const tileCache = new Map();
 function paintTile(type, t){
-const key = type+'|'+(t|0);
-if(tileCache.has(key)) return tileCache.get(key);
-const off = new OffscreenCanvas(T, T), ox = off.getContext('2d');
-for(let py=0;py<T;py++){
-for(let px=0;px<T;px++){
-const wx = px/T, wy = py/T;
-let c = '#000';
-if(type===0) c = mat.grass(wx,wy,t);
-if(type===1) c = mat.path(wx,wy);
-if(type===2) c = mat.water(wx,wy,t);
-ox.fillStyle = c; ox.fillRect(px,py,1,1);
-}
-}
-// add slight vignette / bevel to each tile
-const grd = ox.createLinearGradient(0,0,T,T);
-grd.addColorStop(0,'rgba(255,255,255,.04)');
-grd.addColorStop(1,'rgba(0,0,0,.12)');
-ox.fillStyle = grd; ox.fillRect(0,0,T,T);
-tileCache.set(key, off);
-return off;
-}
-
-/* ========= Rendering ========= */
-function drawWorld(t){
-const w = cv.width, h = cv.height;
-// tiles visible in viewport
-const startX = Math.floor((cam.x - w/2)/T)-1;
-const startY = Math.floor((cam.y - h/2)/T)-1;
-const endX = Math.ceil((cam.x + w/2)/T)+1;
-const endY = Math.ceil((cam.y + h/2)/T)+1;
-
-for(let y=startY; y<=endY; y++){
-if(y<0||y>=MAP_H) continue;
-for(let x=startX; x<=endX; x++){
-if(x<0||x>=MAP_W) continue;
-const type = at(x,y);
-const off = paintTile(type, t*60); // time-based for water shimmer
-cx.drawImage(off, x*T - cam.x + w/2, y*T - cam.y + h/2);
-}
+  const key = type+'|'+(t|0);
+  if(tileCache.has(key)) return tileCache.get(key);
+  const off = new OffscreenCanvas(T, T), ox = off.getContext('2d');
+  for(let py=0;py<T;py++){
+    for(let px=0;px<T;px++){
+      const wx = px/T, wy = py/T;
+      let c = '#000';
+      if(type===0) c = mat.grass(wx,wy,t);
+      if(type===1) c = mat.path(wx,wy);
+      if(type===2) c = mat.water(wx,wy,t);
+      if(type===4) c = mat.rock(wx,wy);
+      ox.fillStyle = c; ox.fillRect(px,py,1,1);
+    }
+  }
+  const grd = ox.createLinearGradient(0,0,T,T);
+  grd.addColorStop(0,'rgba(255,255,255,.04)');
+  grd.addColorStop(1,'rgba(0,0,0,.12)');
+  ox.fillStyle = grd; ox.fillRect(0,0,T,T);
+  tileCache.set(key, off);
+  return off;
 }
 
-// trees (soft round canopy + shadow)
-for(let y=startY; y<=endY; y++){
-if(y<0||y>=MAP_H) continue;
-for(let x=startX; x<=endX; x++){
-if(x<0||x>=MAP_W) continue;
-if(at(x,y)===3){
-const px = x*T - cam.x + w/2 + T/2;
-const py = y*T - cam.y + h/2 + T/2;
-// shadow
-cx.fillStyle='rgba(0,0,0,.25)';
-cx.beginPath(); cx.ellipse(px+8,py+12,T*.32,T*.18,0,0,Math.PI*2); cx.fill();
-// canopy
-const grd = cx.createRadialGradient(px-6,py-10,8, px,py, T*.42);
-grd.addColorStop(0,'#77c96a');
-grd.addColorStop(1,'#237a2b');
-cx.fillStyle=grd;
-cx.beginPath(); cx.arc(px,py,T*.38,0,Math.PI*2); cx.fill();
-// trunk
-cx.strokeStyle='#7a4b2a'; cx.lineWidth=5; cx.lineCap='round';
-cx.beginPath(); cx.moveTo(px,py+10); cx.lineTo(px,py+T*.28); cx.stroke();
+/* ========= Entities: Enemies ========= */
+const enemies = [];
+function spawnEnemy(x,y,type='slime'){
+  const hp = type==='wolf' ? 60 : type==='bramble'? 80 : 40;
+  enemies.push({x,y,vx:0,vy:0,hp, type, hit:0});
 }
-}
-}
+// seed enemies around player
+for(let i=0;i<28;i++){
+  const ang = Math.random()*Math.PI*2, r = 600+Math.random()*800;
+  spawnEnemy(player.x + Math.cos(ang)*r, player.y + Math.sin(ang)*r, (i%3===0?'wolf':(i%5===0?'bramble':'slime')));
 }
 
-function drawPlayer(dt,t){
-const w=cv.width,h=cv.height;
-const px = player.x - cam.x + w/2, py = player.y - cam.y + h/2;
-
-// shadow
-cx.fillStyle='rgba(0,0,0,.32)';
-cx.beginPath(); cx.ellipse(px+8,py+18,18,10,0,0,Math.PI*2); cx.fill();
-
-// body (rounded, shaded)
-const body = cx.createLinearGradient(px-12,py-22, px+12,py+26);
-body.addColorStop(0,'#58b2ff');
-body.addColorStop(1,'#1463c4');
-cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24,32,44,12); cx.fill();
-
-// head
-const head = cx.createRadialGradient(px-4,py-18,4, px,py-8,18);
-head.addColorStop(0,'#ffe1c7'); head.addColorStop(1,'#cc9c70');
-cx.fillStyle=head; cx.beginPath(); cx.arc(px,py-10,12,0,Math.PI*2); cx.fill();
-
-// simple sword swing indicator when attacking
-if(attackTimer>0){
-cx.strokeStyle='rgba(255,255,255,.9)'; cx.lineWidth=4;
-const ang = Math.sin((1-attackTimer)*Math.PI)*1.2;
-const r=36; cx.beginPath();
-cx.arc(px,py, r, -0.6+ang, 0.6+ang); cx.stroke();
-}
+/* ========= Projectiles (Laser Sword) ========= */
+const shots = []; // laser projectiles
+function fireLaser(){
+  const dir = player.face;
+  const speed = 700;
+  let ax=0, ay=0, rot=0;
+  if(dir==='up'){ ay=-1; rot=-Math.PI/2; }
+  else if(dir==='down'){ ay=1; rot=Math.PI/2; }
+  else if(dir==='left'){ ax=-1; rot=Math.PI; }
+  else { ax=1; rot=0; }
+  const nx = ax||0, ny = ay||0;
+  const px = player.x + nx*30, py = player.y + ny*30;
+  shots.push({
+    x:px, y:py, vx:nx*speed, vy:ny*speed,
+    life:0.5, age:0, rot, w:44, h:14, dmg:28
+  });
 }
 
-/* ========= Movement / collisions ========= */
+/* ========= Input & Collisions ========= */
 function tileAtWorld(wx,wy){
-const tx = Math.floor(wx/T), ty = Math.floor(wy/T);
-if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H) return 2; // treat out-of-bounds as water
-return at(tx,ty);
+  const tx = Math.floor(wx/T), ty = Math.floor(wy/T);
+  if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H) return 2;
+  return at(tx,ty);
 }
-function isBlocked(type){ return type===2 || type===3; }
+function isBlocked(type){ return type===2 || type===3 || type===4; }
 
-let attackTimer = 0;
+/* ========= Rendering: World ========= */
+function drawWorld(t){
+  const w = cv.width, h = cv.height;
+  const startX = Math.floor((cam.x - w/2)/T)-1;
+  const startY = Math.floor((cam.y - h/2)/T)-1;
+  const endX = Math.ceil((cam.x + w/2)/T)+1;
+  const endY = Math.ceil((cam.y + h/2)/T)+1;
+
+  // ground tiles
+  for(let y=startY; y<=endY; y++){
+    if(y<0||y>=MAP_H) continue;
+    for(let x=startX; x<=endX; x++){
+      if(x<0||x>=MAP_W) continue;
+      const type = at(x,y);
+      const off = paintTile(type, t*60);
+      cx.drawImage(off, x*T - cam.x + w/2, y*T - cam.y + h/2);
+    }
+  }
+
+  // trees & rocks decorations pass
+  for(let y=startY; y<=endY; y++){
+    if(y<0||y>=MAP_H) continue;
+    for(let x=startX; x<=endX; x++){
+      if(x<0||x>=MAP_W) continue;
+      const type = at(x,y);
+      const px = x*T - cam.x + w/2 + T/2;
+      const py = y*T - cam.y + h/2 + T/2;
+      if(type===3){
+        // tree
+        cx.fillStyle='rgba(0,0,0,.25)';
+        cx.beginPath(); cx.ellipse(px+8,py+12,T*.32,T*.18,0,0,Math.PI*2); cx.fill();
+        const grd = cx.createRadialGradient(px-6,py-10,8, px,py, T*.42);
+        grd.addColorStop(0,'#77c96a'); grd.addColorStop(1,'#237a2b');
+        cx.fillStyle=grd; cx.beginPath(); cx.arc(px,py,T*.38,0,Math.PI*2); cx.fill();
+        cx.strokeStyle='#7a4b2a'; cx.lineWidth=5; cx.lineCap='round';
+        cx.beginPath(); cx.moveTo(px,py+10); cx.lineTo(px,py+T*.28); cx.stroke();
+      } else if(type===4){
+        // rock
+        cx.fillStyle='rgba(0,0,0,.22)';
+        cx.beginPath(); cx.ellipse(px+6,py+10,T*.22,T*.12,0,0,Math.PI*2); cx.fill();
+        const g = cx.createLinearGradient(px-14,py-10,px+14,py+10);
+        g.addColorStop(0,'#a9a9a9'); g.addColorStop(1,'#6e6e6e');
+        cx.fillStyle=g; cx.beginPath(); cx.roundRect(px-16,py-12,32,22,8); cx.fill();
+        cx.fillStyle='rgba(255,255,255,.08)';
+        cx.fillRect(px-10,py-8,8,3);
+      }
+    }
+  }
+}
+
+/* ========= Rendering: Hero (Red Elf) ========= */
+function drawHero(dt,t){
+  const w=cv.width,h=cv.height;
+  const px = player.x - cam.x + w/2, py = player.y - cam.y + h/2;
+
+  // shadow
+  cx.fillStyle='rgba(0,0,0,.32)';
+  cx.beginPath(); cx.ellipse(px+8,py+18,18,10,0,0,Math.PI*2); cx.fill();
+
+  // body armor (red with gold trim)
+  const body = cx.createLinearGradient(px-12,py-22, px+12,py+24);
+  body.addColorStop(0,'#ff606b'); body.addColorStop(1,'#b01724');
+  cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24,32,44,12); cx.fill();
+  // gold shoulders
+  cx.fillStyle='#e7c766';
+  cx.beginPath(); cx.roundRect(px-18,py-24,12,10,5); cx.fill();
+  cx.beginPath(); cx.roundRect(px+6,py-24,12,10,5); cx.fill();
+  // chest gem (glows when firing)
+  const pulse = 0.5 + 0.5*Math.sin(t*6);
+  cx.fillStyle=`rgba(0,255,160,${0.35+0.35*pulse})`;
+  cx.beginPath(); cx.arc(px,py-6,4,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.5)'; cx.fillRect(px-2,py-9,2,2);
+
+  // head (skin) + black hair
+  const head = cx.createRadialGradient(px-4,py-18,4, px,py-8,18);
+  head.addColorStop(0,'#ffe1c7'); head.addColorStop(1,'#cc9c70');
+  cx.fillStyle=head; cx.beginPath(); cx.arc(px,py-12,12,0,Math.PI*2); cx.fill();
+  // ears (elf)
+  cx.fillStyle='#cc9c70';
+  cx.beginPath(); cx.moveTo(px-16,py-14); cx.lineTo(px-22,py-16); cx.lineTo(px-16,py-8); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(px+16,py-14); cx.lineTo(px+22,py-16); cx.lineTo(px+16,py-8); cx.closePath(); cx.fill();
+  // hair (black with highlight)
+  cx.fillStyle='#121316';
+  cx.beginPath(); cx.arc(px,py-16,13,Math.PI,0); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.12)'; cx.fillRect(px-8,py-20,16,3);
+
+  // sword (held side depending on face)
+  const swordLen=26, swordW=6;
+  cx.save();
+  let ang=0, offx=16, offy=4;
+  if(player.face==='left'){ ang=Math.PI; offx=-16; }
+  if(player.face==='up'){ ang=-Math.PI/2; offx=6; offy=-10; }
+  if(player.face==='down'){ ang=Math.PI/2; offx=6; offy=18; }
+  cx.translate(px+offx, py+offy);
+  cx.rotate(ang + Math.sin(t*20)*0.06);
+  // blade
+  const bladeGrad = cx.createLinearGradient(0,0,swordLen,0);
+  bladeGrad.addColorStop(0,'#ffffff');
+  bladeGrad.addColorStop(1,'#c0c6ff');
+  cx.fillStyle=bladeGrad;
+  cx.beginPath(); cx.roundRect(0,-swordW/2,swordLen,swordW,3); cx.fill();
+  // edge glow
+  cx.fillStyle='rgba(255,74,87,.55)'; cx.fillRect(0,-swordW/2,swordLen,2);
+  // hilt
+  cx.fillStyle='#333'; cx.fillRect(-6,-4,6,8);
+  cx.restore();
+
+  // swing arc when melee attacking
+  if(attackTimer>0){
+    cx.strokeStyle='rgba(255,255,255,.9)'; cx.lineWidth=4;
+    const swing = Math.sin((1-attackTimer)*Math.PI)*1.2;
+    const r=36; cx.beginPath();
+    cx.arc(px,py, r, -0.6+swing, 0.6+swing); cx.stroke();
+    // extra laser charge glimmer
+    cx.strokeStyle='rgba(255,74,87,.8)'; cx.lineWidth=2;
+    cx.beginPath(); cx.arc(px,py, r+6, -0.3+swing, 0.3+swing); cx.stroke();
+  }
+}
+
+/* ========= Rendering: Enemies ========= */
+function drawEnemies(t){
+  const w=cv.width,h=cv.height;
+  for(const e of enemies){
+    const px = e.x - cam.x + w/2, py = e.y - cam.y + h/2;
+    // shadow
+    cx.fillStyle='rgba(0,0,0,.28)';
+    cx.beginPath(); cx.ellipse(px+6,py+12,16,9,0,0,Math.PI*2); cx.fill();
+
+    if(e.type==='slime'){
+      const bob = Math.sin((t*6)+(e.x*0.01)) * 2;
+      const grd = cx.createRadialGradient(px-6,py-10,8, px,py, 24);
+      grd.addColorStop(0,'#7de4d3'); grd.addColorStop(1,'#1b8b76');
+      cx.fillStyle=grd; cx.beginPath(); cx.roundRect(px-18,py-18+bob,36,32,14); cx.fill();
+      cx.fillStyle='rgba(0,0,0,.5)'; cx.fillRect(px-6,py-8+bob,4,3); cx.fillRect(px+2,py-8+bob,4,3);
+    } else if(e.type==='wolf'){
+      const step = Math.sin((t*8)+(e.x*0.01))*3;
+      cx.fillStyle='#7a6a63'; cx.beginPath(); cx.roundRect(px-20,py-14,40,22,8); cx.fill();
+      cx.fillStyle='#504640'; cx.fillRect(px-16,py-14,14,14);
+      cx.fillStyle='#fff'; cx.fillRect(px+8,py-6,4,2);
+      cx.fillStyle='#ff4444'; cx.fillRect(px+12,py-2+step,8,3); // tongue flick
+    } else { // bramble
+      const pulse = 0.5+0.5*Math.sin(t*10);
+      cx.fillStyle='#1f5d2a'; cx.beginPath(); cx.roundRect(px-18,py-18,36,36,12); cx.fill();
+      cx.strokeStyle='#2f8d3e'; cx.lineWidth=3;
+      for(let i=0;i<6;i++){
+        cx.beginPath();
+        cx.moveTo(px,py);
+        const a=i*(Math.PI*2/6);
+        cx.lineTo(px+Math.cos(a)*20, py+Math.sin(a)*20);
+        cx.stroke();
+      }
+      cx.fillStyle=`rgba(190,255,120,${0.5+pulse*0.4})`;
+      cx.beginPath(); cx.arc(px,py,6+3*pulse,0,Math.PI*2); cx.fill();
+    }
+
+    // damage blink
+    if(e.hit>0){
+      cx.fillStyle='rgba(255,255,255,.35)';
+      cx.fillRect(px-22,py-22,44,44);
+    }
+  }
+}
+
+/* ========= Rendering: Laser Projectiles ========= */
+function drawShots(dt){
+  const w=cv.width,h=cv.height;
+  for(const s of shots){
+    const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
+    cx.save();
+    cx.translate(px,py);
+    cx.rotate(s.rot);
+    // sword-shaped energy blade
+    const grad = cx.createLinearGradient(-10,0,s.w+6,0);
+    grad.addColorStop(0,'rgba(255,255,255,.95)');
+    grad.addColorStop(0.5,'rgba(255,230,230,.85)');
+    grad.addColorStop(1,'rgba(255,74,87,.8)');
+    cx.fillStyle=grad;
+    cx.beginPath(); cx.roundRect(0,-s.h/2, s.w, s.h, s.h/2); cx.fill();
+    // trailing fade
+    cx.globalAlpha=0.35;
+    cx.fillStyle='rgba(255,74,87,1)'; cx.fillRect(-18,-(s.h/2)*0.6,18,(s.h)*0.6);
+    cx.restore();
+  }
+}
+
+/* ========= Update ========= */
+let attackTimer = 0, shotCooldown=0;
 function update(dt){
-// input vector
-let ix = (keys['a']||keys['ArrowLeft']?-1:0)+(keys['d']||keys['ArrowRight']?1:0);
-let iy = (keys['w']||keys['ArrowUp']?-1:0)+(keys['s']||keys['ArrowDown']?1:0);
-const len = Math.hypot(ix,iy)||1; ix/=len; iy/=len;
+  // input
+  let ix = (keys['a']||keys['ArrowLeft']?-1:0)+(keys['d']||keys['ArrowRight']?1:0);
+  let iy = (keys['w']||keys['ArrowUp']?-1:0)+(keys['s']||keys['ArrowDown']?1:0);
+  const len = Math.hypot(ix,iy)||1; ix/=len; iy/=len;
 
-const speed = player.sp * (keys['Shift']?player.dashMult:1);
-player.vx = ix*speed; player.vy = iy*speed;
+  // face direction
+  if(Math.abs(ix)>0.01||Math.abs(iy)>0.01){
+    if(Math.abs(ix)>Math.abs(iy)) player.face = ix>0?'right':'left';
+    else player.face = iy>0?'down':'up';
+  }
 
-let nx = player.x + player.vx*dt, ny = player.y + player.vy*dt;
+  const speed = player.sp * (keys['Shift']?player.dashMult:1);
+  player.vx = ix*speed; player.vy = iy*speed;
 
-// simple collision: prevent entering water/trees
-const r = 14;
-const check = (x,y)=>{
-const t = tileAtWorld(x,y);
-return isBlocked(t);
-};
-if(!check(nx, player.y-r) && !check(nx, player.y+r)) player.x = nx;
-if(!check(player.x-r, ny) && !check(player.x+r, ny)) player.y = ny;
+  let nx = player.x + player.vx*dt, ny = player.y + player.vy*dt;
+  // collisions
+  const r = 14;
+  const check = (x,y)=> isBlocked(tileAtWorld(x,y));
+  if(!check(nx, player.y-r) && !check(nx, player.y+r)) player.x = nx;
+  if(!check(player.x-r, ny) && !check(player.x+r, ny)) player.y = ny;
 
-// attack
-if(keys['k']||keys['K']) attackTimer = 0.22;
-attackTimer = Math.max(0, attackTimer - dt);
+  // melee attack (K)
+  if(keys['k']||keys['K']) attackTimer = 0.22;
+  attackTimer = Math.max(0, attackTimer - dt);
 
-camUpdate(dt);
+  // laser (J) with simple cooldown
+  shotCooldown = Math.max(0, shotCooldown - dt);
+  if((keys['j']||keys['J']) && shotCooldown<=0){
+    fireLaser(); shotCooldown = 0.18;
+  }
+
+  // update shots
+  for(let i=shots.length-1;i>=0;i--){
+    const s = shots[i];
+    s.x += s.vx*dt; s.y += s.vy*dt; s.age += dt;
+    if(s.age>s.life){ shots.splice(i,1); continue; }
+    // collide with blocked tiles (stop at trees/rocks/water)
+    if(isBlocked(tileAtWorld(s.x, s.y))){
+      shots.splice(i,1); continue;
+    }
+  }
+
+  // enemies AI
+  for(const e of enemies){
+    const dx = player.x - e.x, dy = player.y - e.y;
+    const dist = Math.hypot(dx,dy);
+    const see = dist<520;
+    if(see){
+      const run = (e.type==='bramble'? 50 : e.type==='wolf'? 90 : 60);
+      e.vx = (dx/dist)*run; e.vy = (dy/dist)*run;
+    } else {
+      e.vx += rand(-1,1)*10*dt; e.vy += rand(-1,1)*10*dt;
+    }
+    // move with simple obstacle stop
+    const ex = e.x + e.vx*dt, ey = e.y + e.vy*dt;
+    if(!isBlocked(tileAtWorld(ex, e.y))) e.x=ex;
+    if(!isBlocked(tileAtWorld(e.x, ey))) e.y=ey;
+
+    e.hit = Math.max(0, e.hit - dt);
+    // contact damage
+    if(dist<26 && player.invul<=0){
+      player.hp = Math.max(0, player.hp-8);
+      player.invul = 0.8;
+    }
+  }
+
+  // laser vs enemies
+  for(let i=shots.length-1;i>=0;i--){
+    const s = shots[i];
+    for(let j=enemies.length-1;j>=0;j--){
+      const e = enemies[j];
+      const dx = e.x - s.x, dy = e.y - s.y;
+      if(dx*dx+dy*dy < 38*38){ // hit
+        e.hp -= s.dmg; e.hit=0.15;
+        shots.splice(i,1);
+        if(e.hp<=0) enemies.splice(j,1);
+        break;
+      }
+    }
+  }
+
+  // melee arc damage (short range, wide)
+  if(attackTimer>0){
+    const ang = Math.sin((1-attackTimer)*Math.PI)*1.2;
+    for(let j=enemies.length-1;j>=0;j--){
+      const e = enemies[j];
+      const dx = (e.x-player.x), dy=(e.y-player.y);
+      const d = Math.hypot(dx,dy);
+      if(d<48){
+        e.hp-=14; e.hit=0.12;
+        if(e.hp<=0) enemies.splice(j,1);
+      }
+    }
+  }
+
+  player.invul = Math.max(0, player.invul - dt);
+  camUpdate(dt);
+
+  // update HP bar
+  const hpPct = (player.hp/player.maxhp)*100;
+  document.getElementById('hpfill').style.width = hpPct+'%';
 }
 
-/* ========= Post FX ========= */
-function postFX(){
-// vignette
-const w=cv.width,h=cv.height;
-const g=cx.createRadialGradient(w/2,h/2, h*.35, w/2,h/2, h*.65);
-g.addColorStop(0,'rgba(0,0,0,0)');
-g.addColorStop(1,'rgba(0,0,0,.55)');
-cx.fillStyle=g; cx.fillRect(0,0,w,h);
-// subtle scanlines
-cx.fillStyle='rgba(255,255,255,.04)';
-for(let y=0;y<h;y+=3){ cx.fillRect(0,y,w,1); }
+/* ========= Post FX & Lighting ========= */
+function postFX(time){
+  const w=cv.width,h=cv.height;
+  // subtle day/night cycle
+  const light = 0.72 + 0.28*Math.sin(time/48);
+  cx.fillStyle = `rgba(20,40,80,${0.55*(1-light)})`;
+  cx.fillRect(0,0,w,h);
+  // vignette
+  const g=cx.createRadialGradient(w/2,h/2, h*.35, w/2,h/2, h*.65);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(0,0,0,.55)');
+  cx.fillStyle=g; cx.fillRect(0,0,w,h);
+  // scanlines
+  cx.fillStyle='rgba(255,255,255,.035)';
+  for(let y=0;y<h;y+=3){ cx.fillRect(0,y,w,1); }
 }
 
-/* ========= Main loop ========= */
-let last = performance.now()/1000;
+/* ========= Main Loop ========= */
+let last = performance.now()/1000, paused=false;
+addEventListener('keydown',e=>{ if(e.key==='p'||e.key==='P'){ paused=!paused; }});
+
 function frame(){
-const now = performance.now()/1000, dt = Math.min(0.033, now-last); last=now;
-
-update(dt);
-drawWorld(now);
-drawPlayer(dt, now);
-postFX();
-
-requestAnimationFrame(frame);
+  const now = performance.now()/1000, dt = Math.min(0.033, now-last); last=now;
+  // clear
+  cx.clearRect(0,0,cv.width,cv.height);
+  if(!paused) update(dt);
+  drawWorld(now);
+  drawEnemies(now);
+  drawHero(dt, now);
+  drawShots(dt);
+  postFX(now);
+  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-/* ========= Mobile touch (simple) ========= */
+/* ========= Mobile Touch ========= */
 let touchId=null, tStart=null;
 cv.addEventListener('touchstart',e=>{
-const t=e.changedTouches[0]; touchId=t.identifier; tStart={x:t.clientX,y:t.clientY};
+  const t=e.changedTouches[0]; touchId=t.identifier; tStart={x:t.clientX,y:t.clientY};
 });
 cv.addEventListener('touchmove',e=>{
-const t=[...e.changedTouches].find(t=>t.identifier===touchId); if(!t||!tStart) return;
-const dx=t.clientX-tStart.x, dy=t.clientY-tStart.y;
-keys['a']=dx<-12; keys['d']=dx>12; keys['w']=dy<-12; keys['s']=dy>12;
+  const t=[...e.changedTouches].find(t=>t.identifier===touchId); if(!t||!tStart) return;
+  const dx=t.clientX-tStart.x, dy=t.clientY-tStart.y;
+  keys['a']=dx<-12; keys['d']=dx>12; keys['w']=dy<-12; keys['s']=dy>12;
 });
 cv.addEventListener('touchend',()=>{ keys['a']=keys['d']=keys['w']=keys['s']=false; touchId=null; });
-
-/* ========= Pause/Menu placeholder ========= */
-let paused=false;
-addEventListener('keydown',e=>{ if(e.key==='p'||e.key==='P'){ paused=!paused; }});
 </script>
 </body>
 </html>

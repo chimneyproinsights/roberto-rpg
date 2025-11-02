@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Roberto Fantasy: The Ember of Aeloria — Side-Scroll (Sprites + Mini-Boss + Cutscene + Chiptune)</title>
+<title>Roberto Fantasy — The Ember of Aeloria</title>
 <style>
 :root{
   --bg:#101218; --ui:#e8eef7; --soft:#c9d5e8; --accent:#ff4a57; --gold:#e7c766; --green:#22c55e; --blue:#5ca3ff;
@@ -34,17 +34,38 @@ canvas{width:min(1150px,100vw);height:min(720px,100vh);border-radius:14px;box-sh
 #pause p{margin:6px 0}
 small{opacity:.8}
 
-/* Intro + boss cutscene overlays */
-.overlay{position:fixed;inset:0;background:linear-gradient(#0a0d12,#0b0e14);z-index:7;color:#dfe9ff;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}
-.overlay .line{max-width:780px;margin:8px 20px;text-align:center;opacity:0;transform:translateY(6px);transition:opacity .8s ease, transform .8s ease;font-weight:600}
-.overlay .show{opacity:1;transform:translateY(0)}
+/* Intro overlay (cinematic crawl + battle inferno cover) */
+#intro{position:fixed;inset:0;background:linear-gradient(#0a0d12,#0b0e14);z-index:7;color:#dfe9ff;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}
+#intro .line{max-width:780px;margin:10px 20px;text-align:center;opacity:0;transform:translateY(6px);transition:opacity .8s ease, transform .8s ease;font-weight:600}
+#intro .show{opacity:1;transform:translateY(0)}
 #skip{position:absolute;bottom:18px;right:18px;opacity:.8;background:rgba(255,255,255,.08);padding:6px 10px;border-radius:10px}
-#bossCut{display:none}
+
+/* Title overlay (flat metallic gold serif + thin aura) */
+#titlePlate{
+  position:fixed; top:8%; left:50%; transform:translateX(-50%);
+  color:#e7c766; font-family: "Times New Roman", ui-serif, Georgia, serif;
+  font-weight:800; letter-spacing:.5px; text-align:center; z-index:9;
+  text-shadow:0 0 18px rgba(255,217,139,.6), 0 0 2px #000;
+  display:none; user-select:none;
+}
+#titlePlate h1{ margin:0; font-size: clamp(24px,5.4vw,54px); }
+#titlePlate h2{ margin:6px 0 0 0; font-size: clamp(16px,3.6vw,28px); opacity:.95 }
+
+/* “New Ability Unlocked” caption */
+#caption{
+  position:fixed; left:50%; bottom:70px; transform:translateX(-50%);
+  color:#fff; font-weight:700; font-size:16px; padding:8px 12px; border-radius:12px;
+  background:rgba(10,12,15,.65); border:1px solid rgba(255,255,255,.1);
+  text-shadow:0 0 8px rgba(255,215,120,.6);
+  display:none; z-index:7;
+}
+#caption .gold{background: linear-gradient(90deg,#ffd86b,#fff,#ffd86b); -webkit-background-clip:text; background-clip:text; color:transparent;}
 </style>
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAX0lEQVRYhe2VMQ7AIAwE9/9H2i4K0g9uW0m2lQm6S8o0kX1g7f9Q9q0bQkqVqk2wQ1oC4r3mQ1bEw9ZbqZqfR9Qx6zKpQ3wRCwz7b5cG0R8l7w0f1vY0Qw1k5w0jX2oY9k5yGfM3gO1nG8+oU9i0Q8y0wH2wqB8VgQ7fH1YJvVQAAQH2YVn0x1y5oAAAAASUVORK5CYII=">
 </head>
 <body>
 <div id="wrap">
-  <div id="hud">
+  <div id="hud" aria-label="HUD">
     <span class="badge">Roberto Fantasy — <b>Side-Scroll</b></span>
     <div class="bar"><div id="hpfill" class="fill"></div></div>
     <div class="bar xp"><div id="xpfill" class="fill" style="width:0%"></div></div>
@@ -59,7 +80,7 @@ small{opacity:.8}
   </div>
   <div id="banner">Controller: <b id="gpstat">Not connected</b></div>
   <div id="game"><canvas id="cv" width="1280" height="720"></canvas></div>
-  <div class="hint">Aeloria awaits — purify the Ember Shrines. © You • No external assets</div>
+  <div class="hint">Aeloria awaits — purify the Ember Shrines. © You • Procedural art (no external assets)</div>
 
   <div id="pause">
     <div class="card">
@@ -72,39 +93,31 @@ small{opacity:.8}
     </div>
   </div>
 
-  <!-- Intro -->
-  <div id="intro" class="overlay" role="dialog" aria-live="polite">
-    <div class="line" id="l1">When the Lightfire fell, Aeloria began to fade…</div>
-    <div class="line" id="l2">Only one Ember Knight remains — Eryndor.</div>
-    <div class="line" id="l3">Awaken, Red Elf… the Heartfire calls.</div>
+  <!-- Intro Cinematic -->
+  <div id="intro" role="dialog" aria-live="polite">
+    <div class="line" id="l1">“The banners of Aeloria once shone brighter than the sun itself.”</div>
+    <div class="line" id="l2">“But when the Shadow Wraith rose from the Abyss, the Lightfire was stolen — and the fortress fell to flame.”</div>
+    <div class="line" id="l3">“Now, among the ashes, one knight still stands… Eryndor, the last ember of Aeloria.”</div>
     <div id="skip">Press any key or controller button to begin</div>
   </div>
 
-  <!-- Boss Cutscene -->
-  <div id="bossCut" class="overlay" role="dialog" aria-live="polite">
-    <div class="line" id="b1">The air chills… a shadow uncoils.</div>
-    <div class="line" id="b2">“I am the Warden of Ash. Turn back, spark.”</div>
-    <div class="line" id="b3">Eryndor lifts the blade — the cape flares with light.</div>
-    <div id="skip">Press any key or controller button to continue</div>
+  <!-- Title Plate -->
+  <div id="titlePlate" aria-hidden="true">
+    <h1>Roberto Fantasy — The Ember of Aeloria</h1>
+    <h2></h2>
   </div>
+
+  <!-- HUD Caption -->
+  <div id="caption"><span id="capIcon">⚔️</span> <span class="gold" id="capText">New Ability Unlocked</span></div>
 </div>
 
 <script>
-/* ========= Sprite URLs (replace with i.ibb.co later if you want) ========= */
-const SPRITES = {
-  hero: "sandbox:/mnt/data/eryndor_sprites.png",
-  enemies: "sandbox:/mnt/data/enemies_sprites.png",
-  warden: "sandbox:/mnt/data/warden_sprites.png",
-  fx: "sandbox:/mnt/data/fx_sprites.png"
-};
-
 /* =========================================================
    Canvas & Timing
 ========================================================= */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d',{alpha:false});
 const DPR = Math.min(2, window.devicePixelRatio || 1);
 cv.width = Math.round(cv.width * DPR); cv.height = Math.round(cv.height * DPR);
-cx.imageSmoothingEnabled = true;
 
 let last = performance.now()/1000, paused=false, started=false;
 
@@ -115,7 +128,6 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const rand=(a=1,b=0)=>Math.random()*(a-b)+b;
 
-// tiny value noise for terrain
 function makeNoise(size=256){
   const p = new Float32Array(size*size);
   for(let i=0;i<p.length;i++) p[i]=Math.random();
@@ -141,7 +153,7 @@ const noise = makeNoise();
 const keys = {};
 addEventListener('keydown',e=>{
   keys[e.code]=true;
-  if(!started) beginGame();
+  if(!started) beginGame(); // start music, dismiss intro
   if(e.code==='KeyP') togglePause();
   if(e.code==='KeyE') keys['Interact']=true;
 });
@@ -149,7 +161,7 @@ addEventListener('keyup',e=>{ keys[e.code]=false; if(e.code==='KeyE') keys['Inte
 
 const gpInfo = document.getElementById('gpstat');
 let gamepadIndex = null;
-const BTN = { A:0, B:1, X:2, Y:3, LB:4, RB:5, LT:6, RT:7, SELECT:8, START:9, LSTICK:10, RSTICK:11, UP:12, DOWN:13, LEFT:14, RIGHT:15 };
+const BTN = {A:0,B:1,X:2,Y:3,LB:4,RB:5,LT:6,RT:7,SELECT:8,START:9,LSTICK:10,RSTICK:11,UP:12,DOWN:13,LEFT:14,RIGHT:15};
 function pollGamepad(){
   const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
   if (gps.length){
@@ -166,7 +178,6 @@ function pollGamepad(){
     keys['PAD_LASER']= gp.buttons[BTN.Y]?.pressed;
     keys['PAD_INTER']= gp.buttons[BTN.LT]?.pressed;
     keys['PAD_SHIELD']= gp.buttons[BTN.B]?.pressed;
-    if(!started && (gp.buttons.some(b=>b&&b.pressed) || Math.abs(ax)>0.3)) beginGame();
   } else {
     gpInfo.textContent = 'Not connected';
     gamepadIndex = null;
@@ -186,7 +197,7 @@ function camUpdate(dt, targetX, targetY){
 }
 
 /* =========================================================
-   World (Side-Scroll Terrain + Parallax)
+   World (Side-Scroll Terrain + Parallax + Battle Inferno)
 ========================================================= */
 const W = cv.width, H = cv.height;
 const GROUND_Y = H*0.68;
@@ -206,42 +217,84 @@ function terrainY(x){
   const y1 = heights[seg+1] ?? y0;
   return lerp(y0, y1, t);
 }
+
+/* painterly background: sky, burning fortress w/ golden banners */
 function drawBackground(t){
   const w=cv.width,h=cv.height;
+  // nightfire sky
   const sky = cx.createLinearGradient(0,0,0,h);
-  sky.addColorStop(0,'#1a2133'); sky.addColorStop(1,'#0d111a');
+  sky.addColorStop(0,'#141b2a'); sky.addColorStop(1,'#0b0f16');
   cx.fillStyle=sky; cx.fillRect(0,0,w,h);
-  cx.fillStyle='#1a2a3b';
-  for(let i=0;i<6;i++){
-    const base = (i*600 - (cam.x*0.25)%600);
-    cx.beginPath(); cx.moveTo(base, h*0.75);
-    cx.lineTo(base+180, h*0.55);
-    cx.lineTo(base+360, h*0.75); cx.closePath(); cx.fill();
+
+  // distant smoke layers (painterly strokes)
+  cx.fillStyle='rgba(255,120,80,.05)';
+  for(let i=0;i<16;i++){
+    const base = (i*220 - (cam.x*0.18)%220);
+    const cy = h*0.36 + Math.sin(i*0.7 + t*0.2)*12;
+    cx.beginPath();
+    cx.ellipse(base, cy, 90, 22, 0, 0, Math.PI*2); cx.fill();
   }
-  cx.fillStyle='#122030';
+
+  // burning fortress silhouettes + banners (parallax)
+  for(let k=0;k<2;k++){
+    const par = 0.22 + k*0.06;
+    const baseX = (-(cam.x*par))%(w*1.5);
+    for(let j=-1;j<=1;j++){
+      const ox = baseX + j*(w*1.5) + w*0.25;
+      cx.fillStyle='#1a0f12';
+      cx.fillRect(ox+60, h*0.42, 220, 180); // main wall
+      cx.fillRect(ox+40, h*0.38, 60, 220);  // tower L
+      cx.fillRect(ox+260, h*0.36, 70, 240); // tower R
+      // crenellations
+      cx.fillRect(ox+60, h*0.42-10, 220, 12);
+      for(let c=0;c<8;c++) cx.fillRect(ox+65+c*26, h*0.42-18, 16, 8);
+      // banners (gold)
+      cx.fillStyle='#e7c766';
+      cx.fillRect(ox+72, h*0.42, 10, 54);
+      cx.beginPath(); cx.moveTo(ox+82, h*0.42+54); cx.lineTo(ox+92, h*0.42+70); cx.lineTo(ox+72, h*0.42+70); cx.closePath(); cx.fill();
+      cx.fillRect(ox+256, h*0.42, 10, 62);
+      cx.beginPath(); cx.moveTo(ox+266, h*0.42+62); cx.lineTo(ox+276, h*0.42+78); cx.lineTo(ox+256, h*0.42+78); cx.closePath(); cx.fill();
+
+      // fire glows behind slit windows
+      for(let wj=0; wj<6; wj++){
+        const wx = ox+80 + wj*28; const wy = h*0.48 + (wj%2)*16;
+        const g = cx.createRadialGradient(wx,wy,1, wx,wy, 16);
+        g.addColorStop(0,'rgba(255,160,60,.9)'); g.addColorStop(1,'rgba(255,120,60,0)');
+        cx.fillStyle=g; cx.beginPath(); cx.arc(wx,wy,18,0,Math.PI*2); cx.fill();
+      }
+    }
+  }
+
+  // near hills (parallax layer)
+  cx.fillStyle='#131c24';
   for(let i=0;i<8;i++){
     const base = (i*400 - (cam.x*0.45)%400);
-    cx.beginPath(); cx.moveTo(base, h*0.82);
+    cx.beginPath();
+    cx.moveTo(base, h*0.82);
     cx.quadraticCurveTo(base+100,h*0.68, base+200,h*0.8);
-    cx.quadraticCurveTo(base+300,h*0.88, base+400,h*0.82); cx.fill();
+    cx.quadraticCurveTo(base+300,h*0.88, base+400,h*0.82);
+    cx.fill();
   }
-  cx.fillStyle='rgba(255,255,255,.08)';
-  for(let i=0;i<10;i++){
-    const base = (i*260 - (cam.x*0.15)%260);
-    const cy = 100 + Math.sin((i*0.7)+t*0.2)*18;
-    cx.beginPath(); cx.ellipse(base, cy, 50,18,0,0,Math.PI*2); cx.fill();
-    cx.ellipse(base+30, cy+10, 40,14,0,0,Math.PI*2); cx.fill();
-    cx.ellipse(base-30, cy+10, 40,14,0,0,Math.PI*2); cx.fill();
+
+  // moving embers (subtle, painterly dots)
+  cx.fillStyle='rgba(255,180,90,.08)';
+  for(let i=0;i<50;i++){
+    const ex = (i*60 - (cam.x*0.15)%60);
+    const ey = h*0.6 - (i%10)*20 - (t*20)%200;
+    cx.fillRect(ex, ey, 2, 6);
   }
 }
+
 function drawGround(t){
   const w=cv.width,h=cv.height;
   const startX = cam.x - w/2 - 100, endX = cam.x + w/2 + 100;
   for(let x=Math.floor(startX/SEG_W)*SEG_W; x<endX; x+=SEG_W){
     const y0 = terrainY(x), y1 = terrainY(x+SEG_W);
+    // grass edge
     cx.strokeStyle='#2fa35b'; cx.lineWidth=8;
     cx.beginPath(); cx.moveTo(x - cam.x + w/2, y0 - cam.y + h/2);
     cx.lineTo(x+SEG_W - cam.x + w/2, y1 - cam.y + h/2); cx.stroke();
+    // dirt fill
     const grd = cx.createLinearGradient(0, y0 - cam.y + h/2, 0, h);
     grd.addColorStop(0,'#5b3e2b'); grd.addColorStop(1,'#2c1e15');
     cx.fillStyle=grd; cx.beginPath();
@@ -249,6 +302,7 @@ function drawGround(t){
     cx.lineTo(x+SEG_W - cam.x + w/2, y1 - cam.y + h/2);
     cx.lineTo(x+SEG_W - cam.x + w/2, h); cx.lineTo(x - cam.x + w/2, h);
     cx.closePath(); cx.fill();
+    // stones
     cx.fillStyle='rgba(255,255,255,.06)';
     for(let k=0;k<3;k++){
       const rx = x + rand(SEG_W), ry = lerp(y0,y1, rand());
@@ -258,24 +312,10 @@ function drawGround(t){
 }
 
 /* =========================================================
-   Sprites: loading & helpers
-========================================================= */
-const IMG = {};
-function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
-function drawSprite(img, sx, sy, sw, sh, dx, dy, dw, dh, flip=false){
-  cx.save();
-  if(flip){ cx.translate(dx+dw, dy); cx.scale(-1,1); dx=0; dy=0; }
-  cx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-  cx.restore();
-}
-const CELL = 128; // source cell size on sprite sheets
-const HERO_SCALE = 0.8; // display scaling
-
-/* =========================================================
-   Player & Combat
+   Player (Eryndor — red-gold armor, full helm, gold sword)
 ========================================================= */
 const player = {
-  x: 200, y: 0, vx:0, vy:0,
+  x: 200, y: terrainY(200)-40, vx:0, vy:0,
   w:26, h:46,
   onGround:false, dir:1,
   hp:100, maxhp:100, invul:0,
@@ -284,7 +324,7 @@ const player = {
   attackTimer:0, laserCD:0, charge:0,
   visionTimer:0, shieldTimer:0,
   faceTimer:0, faceState:'calm',
-  animTime:0, stateRow:0, // which row on hero sheet
+  cape:[ {x:0,y:0,vx:0,vy:0}, {x:0,y:0,vx:0,vy:0} ],
   upgrades:{ dash:false, burst:false, vision:false, shield:false }
 };
 function setFace(state, dur=0.25){ player.faceState=state; player.faceTimer=Math.max(player.faceTimer, dur); }
@@ -296,35 +336,46 @@ const GRAV = 1400, MOVE = 360, JUMP_V = 560, DASH_V = 760;
 function groundCollide(px,py,w,h){
   const feetY = py + h/2;
   const ty = terrainY(px);
-  if (feetY >= ty-2) return {hit:true, y: ty - h/2};
+  if (feetY >= ty-2){
+    return {hit:true, y: ty - h/2, normalY:-1};
+  }
   return {hit:false};
 }
 
 /* =========================================================
-   Enemies & Mini-boss
+   Enemies & Mini-Boss
 ========================================================= */
 const enemies = [];
 function spawnEnemy(x,type='crawler'){
   const y = terrainY(x)-24;
   const hp = type==='bramble'?90: type==='wolf'?70:48;
-  enemies.push({x, y, vx:0, vy:0, type, hp, hit:0, dir: Math.random()<.5?-1:1, frame:0});
+  enemies.push({x, y, vx:0, vy:0, type, hp, hit:0, dir: Math.random()<.5?-1:1});
 }
+// populate
 for(let i=0;i<28;i++){
   const x = 560 + i*220 + rand(120);
   spawnEnemy(x, (i%5===0?'bramble': (i%3===0?'wolf':'crawler')));
 }
-const bossGateX = 3200;
-let bossActive=false, bossHP=220, bossX=bossGateX+120, bossY=0, bossPhase=1, bossHit=0;
+// mini-boss: Shadow Wraith
+const warden = { x: 3400, y: terrainY(3400)-40, hp: 420, phase:1, alive:true, hit:0, awaken:false };
 
 /* =========================================================
-   Shrines (upgrades)
+   Shrines (Upgrades)
 ========================================================= */
 const shrines = [];
-function addShrine(x,kind){ const y = terrainY(x)-10; shrines.push({x,y,kind, purified:false, pulse:0}); }
-addShrine(900,'dash'); addShrine(1700,'burst'); addShrine(2500,'vision'); addShrine(3000,'shield');
+function addShrine(x,kind){
+  const y = terrainY(x)-10;
+  shrines.push({x,y,kind, purified:false, pulse:0});
+}
+addShrine(900,'dash');
+addShrine(1700,'burst');
+addShrine(2500,'vision');
+addShrine(3300,'shield');
+
+function near(a,b,dist){ return Math.abs(a-b)<dist; }
 
 /* =========================================================
-   Projectiles
+   Projectiles (Laser & Solar Burst — golden)
 ========================================================= */
 const shots = [];
 function fireLaser(){
@@ -346,7 +397,7 @@ function releaseCharge(){
 }
 
 /* =========================================================
-   Input helpers
+   Input Helpers
 ========================================================= */
 function wantLeft(){ return keys['KeyA']||keys['ArrowLeft']||keys['PAD_LEFT']; }
 function wantRight(){ return keys['KeyD']||keys['ArrowRight']||keys['PAD_RIGHT']; }
@@ -363,32 +414,24 @@ function wantShield(){ return keys['PAD_SHIELD']||keys['KeyB']; }
 function update(dt){
   pollGamepad();
 
-  // anim row selection
-  player.animTime += dt;
-  if(player.faceTimer>0) player.faceTimer = Math.max(0, player.faceTimer - dt);
+  // face decay
+  player.faceTimer = Math.max(0, player.faceTimer - dt);
   if(player.faceTimer<=0) player.faceState = (player.onGround && (Math.abs(player.vx)>10))?'move':'calm';
-  if(!player.onGround) player.stateRow = 1; // run/jump visuals
-  else if(player.attackTimer>0) player.stateRow = 2;
-  else if(player.charge>0) player.stateRow = 3;
-  else player.stateRow = 0;
 
-  // horizontal movement
+  // movement
   let mx = 0;
   if(wantLeft()) mx -= 1;
   if(wantRight()) mx += 1;
-  if(mx!==0) player.dir = Math.sign(mx);
+  player.dir = (mx!==0)? Math.sign(mx) : player.dir;
 
   const accel = player.onGround ? MOVE : MOVE*0.65;
   player.vx += mx*accel*dt;
   player.vx *= player.onGround ? 0.86 : 0.98;
   player.vy += GRAV*dt;
 
-  // jump
   if(wantJump() && player.onGround){
     player.vy = -JUMP_V; player.onGround=false; player.canMidDash = player.upgrades.dash;
   }
-
-  // dash
   if(wantDash()){
     if(player.onGround || (player.upgrades.dash && player.canMidDash)){
       player.vx = player.dir * DASH_V;
@@ -398,25 +441,35 @@ function update(dt){
   }
   player.dashTimer = Math.max(0, player.dashTimer - dt);
 
-  // apply movement
+  // apply move
   player.x += player.vx*dt;
   player.y += player.vy*dt;
 
-  // ground
+  // ground collision
   const col = groundCollide(player.x, player.y, player.w, player.h);
-  if(col.hit){ player.y = col.y; if(player.vy>0) player.onGround=true; player.vy=0; } else player.onGround=false;
+  if(col.hit){
+    player.y = col.y;
+    if(player.vy>0) player.onGround=true;
+    player.vy=0;
+  } else player.onGround=false;
 
   // attacks
   if(wantSword()){ player.attackTimer = 0.18; setFace('attack', .22); }
   player.attackTimer = Math.max(0, player.attackTimer - dt);
 
-  if(wantLaser()){ player.upgrades.burst ? startCharge() : fireLaser(); }
-  else { if(player.upgrades.burst && player.charge>0) releaseCharge(); }
+  // laser / burst
+  if(wantLaser()){
+    if(player.upgrades.burst) startCharge(); else fireLaser();
+  } else {
+    if(player.upgrades.burst && player.charge>0) releaseCharge();
+  }
   player.laserCD = Math.max(0, player.laserCD - dt);
 
+  // vision
   if(player.upgrades.vision && wantInteract()) player.visionTimer = 5.0;
   player.visionTimer = Math.max(0, player.visionTimer - dt);
 
+  // shield
   if(player.upgrades.shield && wantShield() && player.shieldTimer<=0) player.shieldTimer = 2.0;
   player.shieldTimer = Math.max(0, player.shieldTimer - dt);
 
@@ -431,29 +484,26 @@ function update(dt){
     if(s.age>s.life){ shots.splice(i,1); continue; }
   }
 
-  // shrines
+  // shrine interaction + captions
   for(const sh of shrines){
-    sh.pulse = (sh.pulse||0)+dt;
-    const near = Math.abs(sh.x-player.x)<40 && Math.abs((player.y-10)-sh.y)<50;
-    if(near && !sh.purified && wantInteract()){
+    sh.pulse += dt;
+    const close = Math.abs(sh.x-player.x)<40 && Math.abs((player.y-10)-sh.y)<50;
+    if(close && !sh.purified && wantInteract()){
       sh.purified = true;
-      if(sh.kind==='dash') player.upgrades.dash=true, document.getElementById('abDash').classList.remove('lock');
-      if(sh.kind==='burst') player.upgrades.burst=true, document.getElementById('abBurst').classList.remove('lock');
-      if(sh.kind==='vision') player.upgrades.vision=true, document.getElementById('abVision').classList.remove('lock');
-      if(sh.kind==='shield') player.upgrades.shield=true, document.getElementById('abShield').classList.remove('lock');
-      levelFlash = 0.8;
+      let icon='⚔️', txt='New Ability Unlocked: ';
+      if(sh.kind==='dash'){ player.upgrades.dash=true; document.getElementById('abDash').classList.remove('lock'); txt+='Light Dash'; }
+      if(sh.kind==='burst'){ player.upgrades.burst=true; document.getElementById('abBurst').classList.remove('lock'); txt+='Solar Burst'; }
+      if(sh.kind==='vision'){ player.upgrades.vision=true; document.getElementById('abVision').classList.remove('lock'); icon='✨'; txt+='Aether Vision'; }
+      if(sh.kind==='shield'){ player.upgrades.shield=true; document.getElementById('abShield').classList.remove('lock'); icon='🛡️'; txt+='Radiant Shield'; }
+      levelFlash = 0.8; showCaption(icon, txt);
     }
   }
 
   // enemies
   for(let i=enemies.length-1;i>=0;i--){
     const e = enemies[i];
-    if(Math.random()<0.002) e.dir*=-1;
-    const speed = e.type==='wolf'? 95 : 62;
-    e.vx = e.dir * speed; e.vy += GRAV*dt;
-    e.x += e.vx*dt; e.y += e.vy*dt;
-    const ny = terrainY(e.x) - 22; if(e.y>ny){ e.y=ny; e.vy=0; }
-    e.hit = Math.max(0, (e.hit||0) - dt);
+    enemyAI(e, dt);
+    e.hit = Math.max(0, e.hit - dt);
     // shots hit
     for(let k=shots.length-1;k>=0;k--){
       const s = shots[k];
@@ -472,7 +522,7 @@ function update(dt){
         if(e.hp<=0){ addXP(rand(10,18)); enemies.splice(i,1); }
       }
     }
-    // contact damage
+    // contact damage (shield check)
     const contact = Math.abs(e.x-player.x)<26 && Math.abs(e.y-player.y)<40;
     if(contact && player.invul<=0){
       if(player.shieldTimer>0){ e.vx += (e.x<player.x?-1:1)*180; }
@@ -480,33 +530,27 @@ function update(dt){
     }
   }
 
-  // mini-boss activation gate
-  if(!bossActive && player.x>bossGateX){
-    bossActive = true; openBossCutscene();
-    bossY = terrainY(bossX)-26;
+  // mini-boss trigger
+  if(warden.alive && !warden.awaken && player.x>warden.x-320){
+    warden.awaken = true; showCaption('⚔️','The Shadow Wraith descends…');
   }
-  // boss logic (simple hover + lunge)
-  if(bossActive){
-    bossHit = Math.max(0, bossHit - dt);
-    const to = Math.sign(player.x - bossX);
-    bossX += to* (60 + bossPhase*20) * dt;
-    bossY = lerp(bossY, terrainY(bossX)-26 - Math.sin(performance.now()/600)*14, 0.1);
-    // boss takes projectile damage
+  if(warden.alive && warden.awaken){
+    wardenAI(warden, dt);
+    // boss vs shots
     for(let i=shots.length-1;i>=0;i--){
       const s = shots[i];
-      if(Math.abs(bossX-s.x)<42 && Math.abs(bossY-s.y)<38){
-        bossHP -= s.dmg; bossHit=0.12; shots.splice(i,1);
-        if(bossHP<140) bossPhase=2;
-        if(bossHP<60) bossPhase=3;
-        if(bossHP<=0){ bossActive=false; addXP(60); levelFlash=0.9; }
+      if(Math.abs(s.x-warden.x)<40 && Math.abs(s.y-warden.y)<60){
+        warden.hp -= s.dmg*0.7; warden.hit=0.12; shots.splice(i,1);
+        if(warden.hp<=0){ warden.alive=false; showCaption('✨','Heartfire Rekindled!'); addXP(120); }
       }
     }
-    // boss touch
-    const touch = Math.abs(bossX-player.x)<30 && Math.abs(bossY-player.y)<40;
-    if(touch && player.invul<=0){ player.hp=Math.max(0, player.hp-16); player.invul=1.0; }
+    // boss contact
+    if(Math.abs(warden.x-player.x)<34 && Math.abs(warden.y-player.y)<62 && player.invul<=0){
+      if(player.shieldTimer<=0){ player.hp=Math.max(0,player.hp-16); player.invul=1.2; setFace('hurt',.4); }
+    }
   }
 
-  // invuln decay
+  // invuln
   player.invul = Math.max(0, player.invul - dt);
 
   // camera
@@ -515,6 +559,25 @@ function update(dt){
   // UI
   document.getElementById('hpfill').style.width = (player.hp/player.maxhp*100)+'%';
   document.getElementById('xpfill').style.width = (player.xp/player.nextXP*100)+'%';
+}
+
+function enemyAI(e, dt){
+  if(Math.random()<0.002) e.dir*=-1;
+  const speed = e.type==='wolf'? 95 : 62;
+  e.vx = e.dir * speed;
+  e.vy += GRAV*dt;
+  const ny = terrainY(e.x) - 22;
+  e.x += e.vx*dt; e.y += e.vy*dt;
+  if(e.y>ny){ e.y=ny; e.vy=0; }
+}
+
+/* Mini-boss AI (Shadow Wraith) */
+function wardenAI(b, dt){
+  // floaty drift + phase pulses
+  const targetX = player.x + Math.sin(performance.now()/500)*120;
+  b.x += Math.sign(targetX-b.x)*120*dt;
+  const ground = terrainY(b.x)-40;
+  b.y = ground - 30 - 20*Math.sin(performance.now()/400);
 }
 
 /* =========================================================
@@ -528,12 +591,13 @@ function addXP(v){
     player.nextXP = Math.round(player.nextXP*1.35);
     player.maxhp += 5; player.hp = Math.min(player.maxhp, player.hp+12);
     levelFlash=0.9; document.getElementById('lvl').textContent = 'LVL '+player.lvl;
+    showCaption('✨','Level Up — Power Increased!');
   }
 }
 let levelFlash = 0;
 
 /* =========================================================
-   Hidden platforms (Aether Vision)
+   Hidden platforms for Aether Vision
 ========================================================= */
 function drawHiddenPlatforms(){
   if(player.visionTimer<=0) return;
@@ -549,7 +613,7 @@ function drawHiddenPlatforms(){
 }
 
 /* =========================================================
-   Rendering (Sprites)
+   Rendering — Hero, Enemies, Boss, Shots, Shrines
 ========================================================= */
 function drawHero(t){
   const w=cv.width,h=cv.height;
@@ -559,68 +623,158 @@ function drawHero(t){
   cx.fillStyle='rgba(0,0,0,.35)';
   cx.beginPath(); cx.ellipse(px,py+player.h/2-4, 26,10, 0,0,Math.PI*2); cx.fill();
 
-  // pick column from time
-  const frame = Math.floor((player.animTime*10)%8);
-  const sx = frame*CELL, sy = player.stateRow*CELL;
-  const dw = CELL*HERO_SCALE, dh = CELL*HERO_SCALE;
-  drawSprite(IMG.hero, sx, sy, CELL, CELL, px-dw/2, py-dh/2-6, dw, dh, player.dir===-1);
+  // cape physics
+  const anchor = { x: px - player.dir*6, y: py-16 };
+  const wind = 60 * (player.vx/360), g = 900;
+  for(let i=0;i<player.cape.length;i++){
+    const p = player.cape[i];
+    if(i===0){
+      const tx = anchor.x - player.dir*14, ty = anchor.y + 4;
+      p.vx += (tx - p.x)*20*0.016 + wind*0.016;
+      p.vy += (ty - p.y)*20*0.016 + g*0.016;
+    } else {
+      p.vy += g*0.016; p.vx += wind*0.01;
+    }
+    p.vx *= 0.92; p.vy *= 0.92; p.x += p.vx; p.y += p.vy;
+    const prev = i===0? anchor : player.cape[i-1];
+    const dx = p.x-prev.x, dy=p.y-prev.y, d=Math.hypot(dx,dy)||1, rest=20, off=(d-rest)/d;
+    p.x -= dx*off*0.5; p.y -= dy*off*0.5;
+  }
+  if(player.cape[0].x===0){ for(const p of player.cape){ p.x=anchor.x-12; p.y=anchor.y+8; } }
+
+  // cape draw (red with gold trim)
+  cx.save(); cx.beginPath();
+  cx.moveTo(anchor.x, anchor.y);
+  cx.quadraticCurveTo(player.cape[0].x,player.cape[0].y, player.cape[1].x,player.cape[1].y);
+  const grad = cx.createLinearGradient(anchor.x,anchor.y, player.cape[1].x,player.cape[1].y);
+  grad.addColorStop(0,'#b01724'); grad.addColorStop(1,'#ff606b');
+  cx.strokeStyle='#e7c766'; cx.lineWidth=3; cx.fillStyle=grad; cx.fill(); cx.stroke(); cx.restore();
+
+  // body armor (red-gold)
+  const body = cx.createLinearGradient(px-14,py-18, px+14,py+22);
+  body.addColorStop(0,'#ff606b'); body.addColorStop(1,'#b01724');
+  cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24,32,46,12); cx.fill();
+
+  // shoulders (gold)
+  cx.fillStyle='#e7c766';
+  cx.beginPath(); cx.roundRect(px-20,py-24,14,12,6); cx.fill();
+  cx.beginPath(); cx.roundRect(px+6,py-24,14,12,6); cx.fill();
+
+  // helm (full) with gold visor glow
+  cx.fillStyle='#651a1e';
+  cx.beginPath(); cx.roundRect(px-14,py-35,28,24,10); cx.fill();
+  cx.fillStyle='#e7c766';
+  cx.fillRect(px-8,py-26,16,3);
+
+  // arms + hands
+  cx.fillStyle='#b01724'; cx.beginPath(); cx.roundRect(px+10,py-16,14,8,4); cx.fill();
+  cx.beginPath(); cx.roundRect(px-24,py-16,14,8,4); cx.fill();
+  cx.fillStyle='#cc9c70';
+  cx.beginPath(); cx.roundRect(px+20,py-12,8,6,3); cx.fill();
+  cx.beginPath(); cx.roundRect(px-26,py-12,8,6,3); cx.fill();
+
+  // sword (golden blade)
+  cx.save(); cx.translate(px + player.dir*20, py-10);
+  const ang = (player.dir===1)? 0 : Math.PI; cx.rotate(ang + Math.sin(t*22)*0.06);
+  const bladeGrad = cx.createLinearGradient(0,0,28,0);
+  bladeGrad.addColorStop(0,'#ffffff'); bladeGrad.addColorStop(1,'#ffe8a9');
+  cx.fillStyle=bladeGrad; cx.beginPath(); cx.roundRect(0,-4,28,8,4); cx.fill();
+  cx.fillStyle='rgba(255,230,140,.75)'; cx.fillRect(0,-4,28,2);
+  cx.fillStyle='#333'; cx.fillRect(-6,-5,6,10);
+  cx.restore();
+
+  // melee arc
+  if(player.attackTimer>0){
+    cx.strokeStyle='rgba(255,248,200,.95)'; cx.lineWidth=4;
+    const a0 = (player.dir===1)? -0.1 : Math.PI-0.1;
+    const swing = Math.sin((1-player.attackTimer)*Math.PI)*0.9;
+    cx.beginPath(); cx.arc(px,py-6, 46, a0 - swing, a0 + swing); cx.stroke();
+    cx.strokeStyle='rgba(255,214,120,.8)'; cx.lineWidth=2;
+    cx.beginPath(); cx.arc(px,py-6, 54, a0 - swing*0.8, a0 + swing*0.8); cx.stroke();
+  }
 
   // shield aura
   if(player.shieldTimer>0){
-    cx.strokeStyle='rgba(120,255,180,.7)'; cx.lineWidth=3;
+    cx.strokeStyle='rgba(200,255,200,.75)'; cx.lineWidth=3;
     cx.beginPath(); cx.arc(px,py-10, 36, 0, Math.PI*2); cx.stroke();
   }
-  if(player.invul>0){ cx.fillStyle='rgba(255,255,255,.12)'; cx.fillRect(px-20,py-40,40,56); }
+
+  if(player.invul>0){
+    cx.fillStyle='rgba(255,255,255,.18)';
+    cx.fillRect(px-20,py-40,40,56);
+  }
 }
+
 function drawEnemies(t){
   const w=cv.width,h=cv.height;
   for(const e of enemies){
     const px = e.x - cam.x + w/2, py = e.y - cam.y + h/2;
     cx.fillStyle='rgba(0,0,0,.3)'; cx.beginPath(); cx.ellipse(px,py+18, 18,8,0,0,Math.PI*2); cx.fill();
-
-    let row=0;
-    if(e.type==='wolf') row=1;
-    if(e.type==='bramble') row=2;
-    const frame = Math.floor((t*6 + (e.type==='wolf'?1:0))%8);
-    const sx = frame*CELL, sy = row*CELL;
-    drawSprite(IMG.enemies, sx, sy, CELL, CELL, px-CELL*0.6/2, py-CELL*0.6/2, CELL*0.6, CELL*0.6, e.dir===-1);
-
-    if(e.hit>0){ cx.fillStyle='rgba(255,255,255,.18)'; cx.fillRect(px-22,py-22,44,44); }
+    if(e.type==='crawler'){
+      const bob = Math.sin(t*6 + e.x*0.01)*2;
+      const g = cx.createLinearGradient(px-16,py-10, px+16,py+16);
+      g.addColorStop(0,'#9bd0a8'); g.addColorStop(1,'#3e7b4e');
+      cx.fillStyle=g; cx.beginPath(); cx.roundRect(px-18,py-18+bob,36,28,12); cx.fill();
+      cx.fillStyle='#000'; cx.fillRect(px-6,py-10+bob,4,3); cx.fillRect(px+2,py-10+bob,4,3);
+    } else if(e.type==='wolf'){
+      const step = Math.sin(t*8 + e.x*0.01)*3;
+      cx.fillStyle='#7a6a63'; cx.beginPath(); cx.roundRect(px-20,py-14,40,22,8); cx.fill();
+      cx.fillStyle='#504640'; cx.fillRect(px-16,py-14,14,14);
+      cx.fillStyle='#fff'; cx.fillRect(px+8,py-6,4,2);
+      cx.fillStyle='#ff4444'; cx.fillRect(px+12,py-2+step,8,3);
+    } else {
+      const pulse = 0.5+0.5*Math.sin(t*10);
+      cx.fillStyle='#1f5d2a'; cx.beginPath(); cx.roundRect(px-18,py-18,36,36,12); cx.fill();
+      cx.strokeStyle='#2f8d3e'; cx.lineWidth=3;
+      for(let i=0;i<6;i++){ cx.beginPath(); cx.moveTo(px,py); const a=i*(Math.PI*2/6);
+        cx.lineTo(px+Math.cos(a)*20, py+Math.sin(a)*20); cx.stroke(); }
+      cx.fillStyle=`rgba(190,255,120,${0.45+pulse*0.4})`; cx.beginPath(); cx.arc(px,py,6+3*pulse,0,Math.PI*2); cx.fill();
+    }
+    if(e.hit>0){ cx.fillStyle='rgba(255,255,255,.25)'; cx.fillRect(px-22,py-22,44,44); }
   }
 }
-function drawBoss(t){
-  if(!bossActive) return;
+
+function drawWarden(t){
+  if(!warden.alive) return;
   const w=cv.width,h=cv.height;
-  const px = bossX - cam.x + w/2, py = bossY - cam.y + h/2;
-  const frame = Math.floor((t*6)%8);
-  const row = bossPhase-1; // 0..2
-  const sx = frame*CELL, sy = row*CELL;
-  drawSprite(IMG.warden, sx, sy, CELL, CELL, px-CELL*0.9/2, py-CELL*0.9/2, CELL*0.9, CELL*0.9, false);
-  if(bossHit>0){ cx.fillStyle='rgba(255,255,255,.18)'; cx.fillRect(px-30,py-30,60,60); }
+  const px = warden.x - cam.x + w/2, py = warden.y - cam.y + h/2;
+  // shadow
+  cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px,py+30, 32,14,0,0,Math.PI*2); cx.fill();
+  // smoke body with ember cracks
+  const r = 42;
+  const grad = cx.createRadialGradient(px-10,py-20,10, px,py, r);
+  grad.addColorStop(0,'#351319'); grad.addColorStop(1,'#0d0608');
+  cx.fillStyle=grad; cx.beginPath(); cx.roundRect(px-28,py-60,56,96,26); cx.fill();
+  cx.fillStyle='rgba(255,80,60,.14)';
+  for(let i=0;i<8;i++){
+    cx.fillRect(px-6+Math.sin(i*2+t*3)*10, py-40+i*10, 12, 2);
+  }
+  // eyes/visor
+  cx.fillStyle='#ffb36a'; cx.fillRect(px-10,py-28,8,3); cx.fillRect(px+2,py-28,8,3);
+  if(warden.hit>0){ cx.fillStyle='rgba(255,255,255,.2)'; cx.fillRect(px-35,py-68,70,120); }
 }
+
 function drawShots(){
   const w=cv.width,h=cv.height;
   for(const s of shots){
     const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
-    cx.save(); cx.translate(px,py); if(s.rot) cx.rotate(s.rot);
-    // reuse FX sheet rows:
-    // row0: sword trail | row1: lasers | row2: burst rings (we'll draw primitives)
-    if(s.type==='laser'){
-      const sx = 0*CELL, sy = 1*CELL;
-      drawSprite(IMG.fx, sx, sy, CELL, 32, -CELL*0.7/2, -16, CELL*0.7, 32, s.dir===-1);
-    } else {
-      // draw small glowing rectangle for burst rays
-      const grad = cx.createLinearGradient(-10,0,s.w+6,0);
-      grad.addColorStop(0,'rgba(255,255,255,.95)');
-      grad.addColorStop(1,'rgba(255,214,90,.9)');
-      cx.fillStyle=grad; cx.beginPath(); cx.roundRect(0,-s.h/2, s.w, s.h, s.h/2); cx.fill();
-    }
+    cx.save(); cx.translate(px,py);
+    if(s.type==='burst' && s.rot) cx.rotate(s.rot);
+    else cx.rotate((s.dir===1)?0:Math.PI);
+    const grad = cx.createLinearGradient(-10,0,s.w+6,0);
+    grad.addColorStop(0,'rgba(255,255,255,.95)');
+    grad.addColorStop(0.5,'rgba(255,248,220,.9)');
+    grad.addColorStop(1, s.type==='burst' ? 'rgba(255,214,120,.95)' : 'rgba(255,230,160,.95)');
+    cx.fillStyle=grad;
+    cx.beginPath(); cx.roundRect(0,-s.h/2, s.w, s.h, s.h/2); cx.fill();
+    cx.globalAlpha=0.35; cx.fillStyle='rgba(255,214,120,1)';
+    cx.fillRect(-18,-(s.h/2)*0.6,18,(s.h)*0.6);
     cx.restore();
   }
 }
+
 function drawShrines(t){
   const w=cv.width,h=cv.height;
-  cx.font = `${12*DPR}px system-ui`;
   for(const s of shrines){
     const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
     cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px,py+20,18,8,0,0,Math.PI*2); cx.fill();
@@ -630,111 +784,76 @@ function drawShrines(t){
     cx.fillStyle=grad; cx.beginPath(); cx.roundRect(px-12,py-40,24,60,8); cx.fill();
     cx.fillStyle= s.purified ? 'rgba(255,255,255,.9)':'rgba(255,180,180,.9)';
     cx.fillRect(px-2,py-28,4,18); cx.fillRect(px-8,py-14,16,4);
-    const a = (Math.sin((s.pulse||0)*2)+1)/2;
+    const a = (Math.sin(s.pulse*2)+1)/2;
     cx.strokeStyle= s.purified ? `rgba(140,200,255,${0.35+a*0.25})` : `rgba(255,120,120,${0.35+a*0.25})`;
     cx.lineWidth=3; cx.beginPath(); cx.arc(px,py, 46+6*a, 0, Math.PI*2); cx.stroke();
-
     const close = Math.abs(s.x-player.x)<50 && Math.abs(s.y-(player.y-10))<50 && !s.purified;
     if(close){
-      cx.fillStyle='rgba(255,255,255,.9)'; cx.fillRect(px-20,py-58,40,16);
-      cx.fillStyle='#0b0d10'; cx.fillText('Press E', px-18, py-46);
+      cx.fillStyle='rgba(255,255,255,.9)'; cx.fillRect(px-18,py-58,36,16);
+      cx.fillStyle='#0b0d10'; cx.font=`${12*DPR}px system-ui`; cx.fillText('Press E', px-14, py-46);
     }
   }
 }
 
 /* =========================================================
-   Post FX & Level Flash
+   Post FX, title plate
 ========================================================= */
 function postFX(time){
   const w=cv.width,h=cv.height;
   const g=cx.createRadialGradient(w/2,h/2, h*.4, w/2,h/2, h*.72);
-  g.addColorStop(0,'rgba(0,0,0,0)');
-  g.addColorStop(1,'rgba(0,0,0,.55)');
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.55)');
   cx.fillStyle=g; cx.fillRect(0,0,w,h);
-  if(levelFlash>0){ cx.fillStyle=`rgba(255,255,200,${levelFlash*0.4})`; cx.fillRect(0,0,w,h); levelFlash = Math.max(0, levelFlash - 0.02); }
-  cx.fillStyle='rgba(255,255,255,.035)'; for(let y=0;y<h;y+=3) cx.fillRect(0,y,w,1);
+  if(levelFlash>0){
+    cx.fillStyle=`rgba(255,255,200,${levelFlash*0.4})`; cx.fillRect(0,0,w,h);
+    levelFlash = Math.max(0, levelFlash - 0.02);
+  }
+  cx.fillStyle='rgba(255,255,255,.035)';
+  for(let y=0;y<h;y+=3) cx.fillRect(0,y,w,1);
 }
 
 /* =========================================================
-   Pause & Cinematics
+   Pause & Intro & Captions
 ========================================================= */
 const pauseUI = document.getElementById('pause');
 function togglePause(){ paused=!paused; pauseUI.style.display = paused?'flex':'none'; }
 
 const introEl = document.getElementById('intro');
-function runIntro(){ setTimeout(()=>l1.classList.add('show'), 300);
-  setTimeout(()=>l2.classList.add('show'), 2000);
-  setTimeout(()=>l3.classList.add('show'), 3800);
+const titlePlate = document.getElementById('titlePlate');
+function runIntro(){
+  const l1=document.getElementById('l1'), l2=document.getElementById('l2'), l3=document.getElementById('l3');
+  setTimeout(()=>l1.classList.add('show'), 300);
+  setTimeout(()=>l2.classList.add('show'), 1800);
+  setTimeout(()=>l3.classList.add('show'), 3400);
+  // show title plate briefly before start
+  setTimeout(()=>{ titlePlate.style.display='block'; }, 3800);
 }
-const l1=document.getElementById('l1'), l2=document.getElementById('l2'), l3=document.getElementById('l3'); runIntro();
-
-const bossCut = document.getElementById('bossCut');
-function openBossCutscene(){
-  bossCut.style.display='flex';
-  setTimeout(()=>document.getElementById('b1').classList.add('show'), 200);
-  setTimeout(()=>document.getElementById('b2').classList.add('show'), 1600);
-  setTimeout(()=>document.getElementById('b3').classList.add('show'), 3200);
-}
-function closeBossCutscene(){ bossCut.style.display='none'; }
-
-/* =========================================================
-   Music: WebAudio chiptune-orchestra loop (autostarts on first input)
-========================================================= */
-let AC, master, musicStarted=false;
-function musicPlay(){
-  if(musicStarted) return;
-  musicStarted=true;
-  AC = new (window.AudioContext||window.webkitAudioContext)();
-  master = AC.createGain(); master.gain.value = 0.22; master.connect(AC.destination);
-
-  // helper to make a simple mono synth voice
-  function voice(type='square', vol=0.15){ const o=AC.createOscillator(); const g=AC.createGain(); o.type=type; g.gain.value=vol; o.connect(g); g.connect(master); return {o,g}; }
-  // simple pattern (I–V–vi–IV) in A minor feel
-  const BPM = 112, spb = 60/BPM, t0 = AC.currentTime + 0.05;
-
-  function note(freq, start, dur, vol=0.15, type='square'){
-    const v = voice(type, vol); v.o.frequency.value=freq;
-    const t = t0 + start*spb;
-    v.g.gain.setValueAtTime(0.0001, t);
-    v.g.gain.exponentialRampToValueAtTime(vol, t+0.01);
-    v.g.gain.exponentialRampToValueAtTime(0.0001, t+dur*spb);
-    v.o.start(t); v.o.stop(t+dur*spb+0.1);
-  }
-  function tri(freq, start, dur, vol=0.12){ note(freq,start,dur,vol,'triangle'); }
-  function sq(freq, start, dur, vol=0.16){ note(freq,start,dur,vol,'square'); }
-  function saw(freq,start,dur, vol=0.08){ note(freq,start,dur,vol,'sawtooth'); }
-
-  // scale
-  const A=220, B=247, C=262, D=294, E=330, F=349, G=392, A2=440;
-  // 2-bars loop
-  const pat = [
-    // bar 1
-    [A, E, A2], [F, C, A], [D, A, D*2], [E, B, E*2],
-    // bar 2
-    [A, E, A2], [F, C, A], [D, A, D*2], [E, B, E*2],
-  ];
-  for(let i=0;i<pat.length;i++){
-    const [b1,b2,lead] = pat[i];
-    const s = i*2; // two beats per chord
-    // bass
-    sq(b1/2, s+0.0, 1.6, 0.18);
-    sq(b2/2, s+0.8, 1.6, 0.16);
-    // pad
-    tri(b1, s+0.0, 1.9, 0.10);
-    tri(b2, s+0.0, 1.9, 0.10);
-    // lead arps
-    saw(lead, s+0.0, 0.4, 0.10);
-    saw(lead*1.125, s+0.5, 0.35, 0.08);
-    saw(lead*0.75, s+1.0, 0.35, 0.08);
-  }
-  // reschedule itself roughly every 4 bars
-  setTimeout(()=>{ musicStarted=false; musicPlay(); }, (spb*pat.length*2-0.1)*1000);
-}
+runIntro();
 function beginGame(){
   if(started) return; started=true;
   introEl.style.display='none';
+  titlePlate.style.display='block';
+  setTimeout(()=>{ titlePlate.style.display='none'; }, 2200);
   musicPlay();
 }
+
+/* HUD caption */
+const cap = document.getElementById('caption');
+const capIcon = document.getElementById('capIcon');
+const capText = document.getElementById('capText');
+let capTimer = 0;
+function showCaption(icon, text){
+  capIcon.textContent = icon; capText.textContent = text;
+  cap.style.display='block'; cap.style.opacity=0; capTimer = 3.2;
+}
+
+/* =========================================================
+   Music (chiptune orchestra; base64 tiny placeholders)
+========================================================= */
+let currentTheme = 'main';
+const music = new Audio(); music.loop = true; music.volume = 0.25;
+// ultra-small loop (placeholder). We can swap with longer base64 later.
+music.src = "data:audio/wav;base64,UklGRqQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YWCDAAAAgICAf39/f39/gICAf4CAgH9/f39/f4CAgICAf39/gICAf39/f4CAgICAf4CAgH9/f39/f4CAgICAf39/gICAf39/f4CAgICAf39/gICAf39/f4CAgICAf39/gICA";
+function musicPlay(){ try{ music.play().catch(()=>{}); }catch(e){} }
 
 /* =========================================================
    Main Loop
@@ -745,41 +864,22 @@ function frame(){
 
   if(!paused && started) update(dt);
 
+  // caption fade
+  if(capTimer>0){ capTimer-=dt; cap.style.opacity = Math.min(1, cap.style.opacity*1 + 0.1); if(capTimer<=0){ cap.style.display='none'; } }
+
   drawBackground(now);
   drawGround(now);
   if(player.visionTimer>0) drawHiddenPlatforms();
   drawShrines(now);
   drawEnemies(now);
-  drawBoss(now);
+  if(warden.awaken && warden.alive) drawWarden(now);
   drawShots();
   drawHero(now);
   postFX(now);
 
   requestAnimationFrame(frame);
 }
-
-/* =========================================================
-   Boot: load sprites then start loop
-========================================================= */
-(async function(){
-  // load images
-  IMG.hero = await loadImage(SPRITES.hero);
-  IMG.enemies = await loadImage(SPRITES.enemies);
-  IMG.warden = await loadImage(SPRITES.warden);
-  IMG.fx = await loadImage(SPRITES.fx);
-
-  // place player on ground after load
-  player.y = terrainY(player.x)-40;
-
-  // cutscene skip: any input
-  const anyKey = ()=>{ if(!started) beginGame(); if(bossCut.style.display==='flex') closeBossCutscene(); };
-  window.addEventListener('keydown', anyKey);
-  window.addEventListener('mousedown', anyKey);
-  window.addEventListener('touchstart', anyKey);
-  window.addEventListener('gamepadconnected', anyKey);
-
-  requestAnimationFrame(frame);
-})();
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>

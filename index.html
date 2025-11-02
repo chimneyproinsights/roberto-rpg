@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Roberto Fantasy: The Ember of Aeloria — Side-Scroll Build (+Shrines, Upgrades, Intro, Chiptune)</title>
+<title>Roberto Fantasy: The Ember of Aeloria — Cinematic Side-Scroll (Story A + Mini-Boss)</title>
 <style>
 :root{
-  --bg:#101218; --ui:#e8eef7; --soft:#c9d5e8; --accent:#ff4a57; --gold:#e7c766; --green:#22c55e; --blue:#5ca3ff;
-  --panel:rgba(10,12,15,.6);
+  --bg:#0f1218; --ui:#e8eef7; --soft:#c9d5e8; --accent:#ff4a57; --gold:#e7c766; --green:#22c55e; --blue:#5ca3ff;
+  --panel:rgba(10,12,15,.6); --glow:0 0 24px rgba(255,210,120,.25), 0 0 60px rgba(255,120,80,.12);
 }
 html,body{height:100%;margin:0;background:var(--bg);color:var(--ui);font:600 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
 #wrap{height:100%;display:flex;flex-direction:column}
 #hud{position:fixed;left:12px;top:10px;background:var(--panel);backdrop-filter:blur(6px);
-  padding:8px 12px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center;z-index:6}
+  padding:8px 12px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center;z-index:8}
 .badge{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.1);font-weight:700}
 .bar{width:160px;height:10px;background:rgba(255,255,255,.16);border-radius:999px;overflow:hidden;position:relative}
 .fill{height:100%;background:linear-gradient(90deg,#36d399,#22c55e);width:100%}
@@ -26,19 +26,24 @@ kbd{background:rgba(255,255,255,.1);padding:1px 5px;border-radius:6px}
 .abil .dot{position:absolute;width:6px;height:6px;border-radius:999px;right:2px;bottom:2px;background:#fff;opacity:.2}
 #game{flex:1;display:flex;align-items:center;justify-content:center}
 canvas{width:min(1150px,100vw);height:min(720px,100vh);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.55);background:#0b0d10}
-#banner{position:fixed;right:12px;top:10px;background:var(--panel);backdrop-filter:blur(6px);padding:8px 12px;border-radius:12px;z-index:6}
+#banner{position:fixed;right:12px;top:10px;background:var(--panel);backdrop-filter:blur(6px);padding:8px 12px;border-radius:12px;z-index:8}
 .hint{position:fixed;right:12px;bottom:8px;opacity:.75;z-index:6}
-#pause{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:8}
+#pause{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:10}
 #pause .card{background:#11151c;border:1px solid rgba(255,255,255,.08);padding:18px 20px;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.5);max-width:620px}
 #pause h3{margin:0 0 10px 0}
 #pause p{margin:6px 0}
 small{opacity:.8}
-
-/* Intro overlay */
-#intro{position:fixed;inset:0;background:linear-gradient(#0a0d12,#0b0e14);z-index:7;color:#dfe9ff;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}
-#intro .line{max-width:780px;margin:8px 20px;text-align:center;opacity:0;transform:translateY(6px);transition:opacity .8s ease, transform .8s ease;font-weight:600}
+/* Story Intro (Option A) */
+#intro{position:fixed;inset:0;background:radial-gradient(1200px 600px at 50% 30%, #131927 0%, #0d111a 60%, #0b0e14 100%);z-index:9;color:#dfe9ff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}
+#logo{font-weight:800;letter-spacing:.5px;font-size:28px;margin-bottom:8px;text-shadow:var(--glow);opacity:0;transform:translateY(8px);transition:all .8s ease}
+#intro .line{max-width:820px;margin:10px 20px;text-align:center;opacity:0;transform:translateY(6px);transition:opacity .8s ease, transform .8s ease;font-weight:600}
 #intro .show{opacity:1;transform:translateY(0)}
-#skip{position:absolute;bottom:18px;right:18px;opacity:.8;background:rgba(255,255,255,.08);padding:6px 10px;border-radius:10px}
+#skip{position:absolute;bottom:18px;right:18px;opacity:.85;background:rgba(255,255,255,.08);padding:6px 10px;border-radius:10px}
+#bossbar{position:fixed;left:50%;transform:translateX(-50%);top:16px;z-index:7;display:none;gap:8px;align-items:center}
+#bossname{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.1)}
+#bosshp{width:360px;height:12px;background:rgba(255,255,255,.16);border-radius:10px;overflow:hidden}
+#bosshp .fill{background:linear-gradient(90deg,#ff9e9e,#ff4a57);height:100%;width:100%}
 </style>
 </head>
 <body>
@@ -54,8 +59,9 @@ small{opacity:.8}
       <div id="abVision" class="abil lock" style="background:#6ad1ff" aria-label="Aether Vision"><span class="dot"></span></div>
       <div id="abShield" class="abil lock" style="background:#7bff9b" aria-label="Radiant Shield"><span class="dot"></span></div>
     </div>
-    <span id="tips">Move <kbd>A/D</kbd> • Jump <kbd>W/Space</kbd> • Dash <kbd>Shift</kbd> • Sword <kbd>K</kbd> • Laser <kbd>J</kbd> • Interact <kbd>E</kbd> • Pause <kbd>P</kbd></span>
+    <span id="tips">Move <kbd>A/D</kbd> • Jump <kbd>W/Space</kbd> • Dash <kbd>Shift</kbd> • Sword <kbd>K</kbd> • Laser <kbd>J</kbd> (hold for Burst) • Interact <kbd>E</kbd> • Pause <kbd>P</kbd></span>
   </div>
+  <div id="bossbar"><span id="bossname">Heartfire Warden — Shadow Wraith</span><div id="bosshp"><div id="bossfill" class="fill"></div></div></div>
   <div id="banner">Controller: <b id="gpstat">Not connected</b></div>
   <div id="game"><canvas id="cv" width="1280" height="720"></canvas></div>
   <div class="hint">Aeloria awaits — purify the Ember Shrines. © You • No external assets</div>
@@ -63,19 +69,20 @@ small{opacity:.8}
   <div id="pause">
     <div class="card">
       <h3>⏸ Paused — The Ember of Aeloria</h3>
-      <p><b>Goal:</b> Purify Ember Shrines and rekindle the Heartfire.</p>
-      <p><b>Controls:</b> A/D move, W/Space jump, Shift dash, K sword, J laser (hold for Solar Burst), E interact (Vision), B shield, P pause.</p>
-      <p><b>Leveling:</b> Defeat creatures → gain <i>Ember Fragments</i> → auto level-up.</p>
+      <p><b>Goal:</b> Purify Ember Shrines, defeat the Warden, rekindle the Heartfire.</p>
+      <p><b>Controls:</b> A/D move, W/Space jump, Shift dash, K sword, J laser (hold for Solar Burst), E interact/vision, B shield, P pause.</p>
+      <p><b>Leveling:</b> Defeat creatures → collect fragments → auto level-up.</p>
       <p><b>Upgrades:</b> Light Dash • Solar Burst • Aether Vision • Radiant Shield</p>
       <p><small>Tip: Bluetooth/USB controllers supported — connect & press any button.</small></p>
     </div>
   </div>
 
-  <!-- Intro Cinematic (auto-scroll + skippable) -->
+  <!-- Story Intro (Option A) -->
   <div id="intro" role="dialog" aria-live="polite">
-    <div class="line" id="l1">When the Lightfire fell, Aeloria began to fade…</div>
-    <div class="line" id="l2">Only one Ember Knight remains — Eryndor.</div>
-    <div class="line" id="l3">Awaken, Red Elf… the Heartfire calls.</div>
+    <div id="logo">The Ember of Aeloria</div>
+    <div class="line" id="l1">When the Heartfire dimmed, the night learned to walk.</div>
+    <div class="line" id="l2">Eryndor — last Ember Knight — crosses the fading wilds,</div>
+    <div class="line" id="l3">to rekindle ancient shrines and face the Heartfire’s fallen Warden.</div>
     <div id="skip">Press any key or controller button to begin</div>
   </div>
 </div>
@@ -87,34 +94,39 @@ small{opacity:.8}
 const cv = document.getElementById('cv'), cx = cv.getContext('2d',{alpha:false});
 const DPR = Math.min(2, window.devicePixelRatio || 1);
 cv.width = Math.round(cv.width * DPR); cv.height = Math.round(cv.height * DPR);
-
-let last = performance.now()/1000, paused=false, started=false;
+let last = performance.now()/1000, paused=false, started=false, cutscene=false;
 
 /* =========================================================
-   Math & Noise
+   Math & Helpers
 ========================================================= */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const rand=(a=1,b=0)=>Math.random()*(a-b)+b;
+const nowSec=()=>performance.now()/1000;
 
-function makeNoise(size=256){
-  const p = new Float32Array(size*size);
-  for(let i=0;i<p.length;i++) p[i]=Math.random();
-  const v=(x,y)=>p[((x&255)<<8)|(y&255)];
-  return (x,y,oct=4)=>{
-    let amp=1,freq=1,sum=0,norm=0;
-    for(let i=0;i<oct;i++){
-      const xi=Math.floor(x*freq), yi=Math.floor(y*freq);
-      const xf=x*freq-xi, yf=y*freq-yi;
-      const a=v(xi,yi), b=v(xi+1,yi), c=v(xi,yi+1), d=v(xi+1,yi+1);
-      const u=xf*xf*(3-2*xf), w=yf*yf*(3-2*yf);
-      const n=lerp(lerp(a,b,u), lerp(c,d,u), w);
-      sum+=n*amp; norm+=amp; amp*=.5; freq*=2;
-    }
-    return sum/norm;
-  };
+/* =========================================================
+   Optional Sprite Manifest (future: swap to i.ibb.co)
+   For now, we render procedurally. Keep this object for easy swap.
+========================================================= */
+const SPRITES = {
+  manifest:{
+    // Example (replace with i.ibb.co PNGs later):
+    // hero:'https://i.ibb.co/XXXX/eryndor_sprites.png',
+    // enemies:'https://i.ibb.co/XXXX/enemies_sprites.png',
+    // warden:'https://i.ibb.co/XXXX/warden_sprites.png',
+    // fx:'https://i.ibb.co/XXXX/fx_sprites.png'
+  },
+  img:{}
+};
+// Loader (not used yet since we’re procedural)
+async function loadSprites(){
+  const entries = Object.entries(SPRITES.manifest);
+  for(const [k,url] of entries){
+    const img = new Image(); img.decoding='async'; img.src=url;
+    await img.decode().catch(()=>{});
+    SPRITES.img[k]=img;
+  }
 }
-const noise = makeNoise();
 
 /* =========================================================
    Input (Keyboard + Gamepad)
@@ -122,19 +134,21 @@ const noise = makeNoise();
 const keys = {};
 addEventListener('keydown',e=>{
   keys[e.code]=true;
-  if(!started) beginGame(); // start music & dismiss intro on first input
+  if(!started) beginGame();
   if(e.code==='KeyP') togglePause();
   if(e.code==='KeyE') keys['Interact']=true;
+  if(e.code==='KeyB') keys['Shield']=true;
 });
-addEventListener('keyup',e=>{ keys[e.code]=false; if(e.code==='KeyE') keys['Interact']=false; });
+addEventListener('keyup',e=>{
+  keys[e.code]=false;
+  if(e.code==='KeyE') keys['Interact']=false;
+  if(e.code==='KeyB') keys['Shield']=false;
+});
 
-/* Gamepad mapping (Bluetooth/USB) */
+/* Gamepad mapping */
 const gpInfo = document.getElementById('gpstat');
-let gamepadIndex = null, gpJustStarted=false;
-const BTN = {
-  A:0, B:1, X:2, Y:3, LB:4, RB:5, LT:6, RT:7, SELECT:8, START:9,
-  LSTICK:10, RSTICK:11, UP:12, DOWN:13, LEFT:14, RIGHT:15
-};
+let gamepadIndex = null;
+const BTN = {A:0,B:1,X:2,Y:3,LB:4,RB:5,LT:6,RT:7,SELECT:8,START:9,LSTICK:10,RSTICK:11,UP:12,DOWN:13,LEFT:14,RIGHT:15};
 function pollGamepad(){
   const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
   if (gps.length){
@@ -149,23 +163,18 @@ function pollGamepad(){
     keys['PAD_DASH'] = gp.buttons[BTN.RB]?.pressed || gp.buttons[BTN.RT]?.pressed;
     keys['PAD_SWORD']= gp.buttons[BTN.X]?.pressed;
     keys['PAD_LASER']= gp.buttons[BTN.Y]?.pressed;
-    keys['PAD_INTER']= gp.buttons[BTN.LT]?.pressed; // Aether Vision
+    keys['PAD_INTER']= gp.buttons[BTN.LT]?.pressed;
     keys['PAD_SHIELD']= gp.buttons[BTN.B]?.pressed;
-    if(!started && (gp.buttons.some(b=>b&&b.pressed) || Math.abs(ax)>0.3)){
-      gpJustStarted=true; beginGame();
-    }
-  } else {
-    gpInfo.textContent = 'Not connected';
-    gamepadIndex = null;
-  }
+    if(!started && (gp.buttons.some(b=>b&&b.pressed) || Math.abs(ax)>0.3)) beginGame();
+  } else { gpInfo.textContent = 'Not connected'; gamepadIndex=null; }
 }
-window.addEventListener('gamepadconnected',()=>{ gpInfo.textContent='Connected'; });
-window.addEventListener('gamepaddisconnected',()=>{ gpInfo.textContent='Not connected'; gamepadIndex=null; });
+addEventListener('gamepadconnected',()=>{ gpInfo.textContent='Connected'; });
+addEventListener('gamepaddisconnected',()=>{ gpInfo.textContent='Not connected'; gamepadIndex=null; });
 
 /* =========================================================
    Camera
 ========================================================= */
-const cam = { x:0, y:0 };
+const cam = { x:0, y:0, shake:0 };
 function camUpdate(dt, targetX, targetY){
   const ease = 1 - Math.pow(0.001, dt);
   cam.x += (targetX - cam.x)*ease;
@@ -176,46 +185,36 @@ function camUpdate(dt, targetX, targetY){
    World (Side-Scroll Terrain + Parallax)
 ========================================================= */
 const W = cv.width, H = cv.height;
-const GROUND_Y = H*0.68;
-const SEG_W = 80;
-
-const TERRAIN_LEN = 520;
+const GROUND_Y = H*0.68, SEG_W=80, TERRAIN_LEN=560;
 const heights = new Float32Array(TERRAIN_LEN);
-for(let i=0;i<TERRAIN_LEN;i++){
-  const n = noise(i*0.08, 0, 4);
-  heights[i] = GROUND_Y - (n-0.5)*140;
-}
+for(let i=0;i<TERRAIN_LEN;i++){ const n = (Math.sin(i*0.11)*0.5+0.5)*0.3 + (Math.random()*0.1); heights[i] = GROUND_Y - (n-0.5)*160; }
 function terrainY(x){
-  const seg = Math.floor(x/SEG_W);
-  if(seg<0) return 99999;
+  const seg = Math.floor(x/SEG_W); if(seg<0) return 99999;
   const t = (x - seg*SEG_W)/SEG_W;
-  const y0 = heights[seg] ?? heights[heights.length-1];
-  const y1 = heights[seg+1] ?? y0;
-  return lerp(y0, y1, t);
+  const y0 = heights[seg] ?? heights[heights.length-1], y1 = heights[seg+1] ?? y0;
+  return lerp(y0,y1,t);
 }
-
 function drawBackground(t){
   const w=cv.width,h=cv.height;
   const sky = cx.createLinearGradient(0,0,0,h);
   sky.addColorStop(0,'#1a2133'); sky.addColorStop(1,'#0d111a');
   cx.fillStyle=sky; cx.fillRect(0,0,w,h);
-  // mountains
-  cx.fillStyle='#1a2a3b';
+  // mountains (parallax)
+  cx.fillStyle='#182637';
   for(let i=0;i<6;i++){
-    const base = (i*600 - (cam.x*0.25)%600);
-    cx.beginPath(); cx.moveTo(base, h*0.75);
-    cx.lineTo(base+180, h*0.55);
-    cx.lineTo(base+360, h*0.75); cx.closePath(); cx.fill();
+    const base = (i*620 - (cam.x*0.25)%620);
+    cx.beginPath(); cx.moveTo(base, h*0.76);
+    cx.lineTo(base+200, h*0.56); cx.lineTo(base+400, h*0.76); cx.closePath(); cx.fill();
   }
-  // near hills
+  // hills
   cx.fillStyle='#122030';
   for(let i=0;i<8;i++){
-    const base = (i*400 - (cam.x*0.45)%400);
-    cx.beginPath(); cx.moveTo(base, h*0.82);
-    cx.quadraticCurveTo(base+100,h*0.68, base+200,h*0.8);
-    cx.quadraticCurveTo(base+300,h*0.88, base+400,h*0.82); cx.fill();
+    const base = (i*420 - (cam.x*0.45)%420);
+    cx.beginPath(); cx.moveTo(base, h*0.84);
+    cx.quadraticCurveTo(base+120,h*0.7, base+220,h*0.82);
+    cx.quadraticCurveTo(base+320,h*0.9, base+420,h*0.84); cx.fill();
   }
-  // moving clouds
+  // clouds
   cx.fillStyle='rgba(255,255,255,.08)';
   for(let i=0;i<10;i++){
     const base = (i*260 - (cam.x*0.15)%260);
@@ -240,7 +239,6 @@ function drawGround(t){
     cx.lineTo(x+SEG_W - cam.x + w/2, y1 - cam.y + h/2);
     cx.lineTo(x+SEG_W - cam.x + w/2, h); cx.lineTo(x - cam.x + w/2, h);
     cx.closePath(); cx.fill();
-    // stones
     cx.fillStyle='rgba(255,255,255,.06)';
     for(let k=0;k<3;k++){
       const rx = x + rand(SEG_W), ry = lerp(y0,y1, rand());
@@ -250,7 +248,7 @@ function drawGround(t){
 }
 
 /* =========================================================
-   Player (Red Elf with Cape, Face, Hands)
+   Player (Red-Gold armored, helmet, cape)
 ========================================================= */
 const player = {
   x: 200, y: terrainY(200)-40, vx:0, vy:0,
@@ -258,10 +256,11 @@ const player = {
   onGround:false, dir:1,
   hp:100, maxhp:100, invul:0,
   lvl:1, xp:0, nextXP:50,
-  dashTimer:0, canMidDash:false, // Light Dash uses these
-  attackTimer:0, laserCD:0, charge:0, // Solar Burst
+  dashTimer:0, canMidDash:false,
+  attackTimer:0, laserCD:0, charge:0,
   visionTimer:0, shieldTimer:0,
   faceTimer:0, faceState:'calm',
+  runBob:0, footStep:0,
   cape:[ {x:0,y:0,vx:0,vy:0}, {x:0,y:0,vx:0,vy:0} ],
   upgrades:{ dash:false, burst:false, vision:false, shield:false }
 };
@@ -270,54 +269,61 @@ function setFace(state, dur=0.25){ player.faceState=state; player.faceTimer=Math
 /* =========================================================
    Physics & Collisions
 ========================================================= */
-const GRAV = 1400, MOVE = 360, JUMP_V = 560, DASH_V = 760;
+const GRAV = 1400, MOVE = 360, JUMP_V = 560, DASH_V = 780;
 function groundCollide(px,py,w,h){
   const feetY = py + h/2;
   const ty = terrainY(px);
-  if (feetY >= ty-2){
-    return {hit:true, y: ty - h/2, normalY:-1};
-  }
+  if (feetY >= ty-2) return {hit:true, y: ty - h/2, normalY:-1};
   return {hit:false};
 }
 
 /* =========================================================
-   Enemies & XP
+   Enemies, XP Orbs, Hit Sparks
 ========================================================= */
-const enemies = [];
+const enemies = [], orbs = [], sparks = [];
 function spawnEnemy(x,type='crawler'){
   const y = terrainY(x)-24;
   const hp = type==='bramble'?90: type==='wolf'?70:48;
-  enemies.push({x, y, vx:0, vy:0, type, hp, hit:0, dir: Math.random()<.5?-1:1});
+  enemies.push({x, y, vx:0, vy:0, type, hp, hit:0, dir: Math.random()<.5?-1:1, ai:0, atk:0});
 }
-for(let i=0;i<30;i++){
-  const x = 560 + i*220 + rand(120);
-  spawnEnemy(x, (i%5===0?'bramble': (i%3===0?'wolf':'crawler')));
-}
+for(let i=0;i<30;i++){ const x = 560 + i*220 + rand(120); spawnEnemy(x, (i%5===0?'bramble': (i%3===0?'wolf':'crawler'))); }
+
 function enemyAI(e, dt){
-  if(Math.random()<0.002) e.dir*=-1;
-  const speed = e.type==='wolf'? 95 : 62;
+  // simple 3-state for wolves: 0 idle, 1 chase, 2 strike
+  const dist = Math.abs(e.x - player.x);
+  if(e.type==='wolf'){
+    if(dist<220 && e.ai===0) e.ai=1;
+    if(e.ai===1 && dist<70){ e.ai=2; e.atk=0.25; }
+    if(e.ai===2 && e.atk<=0){ e.ai=1; }
+    if(e.ai===1){ e.dir = (player.x<e.x)?-1:1; }
+  } else {
+    if(Math.random()<0.002) e.dir*=-1;
+  }
+  const speed = e.type==='wolf'? (e.ai===2?160:95) : 62;
   e.vx = e.dir * speed;
   e.vy += GRAV*dt;
-  const ny = terrainY(e.x) - 22;
   e.x += e.vx*dt; e.y += e.vy*dt;
-  if(e.y>ny){ e.y=ny; e.vy=0; }
+  const ny = terrainY(e.x) - 22; if(e.y>ny){ e.y=ny; e.vy=0; }
+  e.hit = Math.max(0, e.hit - dt);
+  e.atk = Math.max(0, e.atk - dt);
+}
+
+function addSparks(x,y,dir,count=6,color='rgba(255,230,160,.9)'){
+  for(let i=0;i<count;i++){
+    const a = (dir??(Math.random()*Math.PI*2));
+    sparks.push({x,y, vx:Math.cos(a)*rand(120,60), vy:Math.sin(a)*rand(120,60)-40, life:0.35, age:0, color});
+  }
+}
+function addOrb(x,y,amt){
+  orbs.push({x,y, vx:rand(80,-80), vy:rand(-160,-240), g:900, age:0, life:6, amt});
 }
 
 /* =========================================================
    Shrines (Upgrades)
 ========================================================= */
 const shrines = [];
-function addShrine(x,kind){ // kind: 'dash','burst','vision','shield'
-  const y = terrainY(x)-10;
-  shrines.push({x,y,kind, purified:false, pulse:0});
-}
-// place 4 shrines along the path
-addShrine(900,'dash');
-addShrine(1700,'burst');
-addShrine(2500,'vision');
-addShrine(3300,'shield');
-
-function near(a,b,dist){ return Math.abs(a-b)<dist; }
+function addShrine(x,kind){ const y = terrainY(x)-10; shrines.push({x,y,kind, purified:false, pulse:0}); }
+addShrine(900,'dash'); addShrine(1700,'burst'); addShrine(2500,'vision'); addShrine(3300,'shield');
 
 /* =========================================================
    Projectiles (Laser & Solar Burst)
@@ -326,20 +332,63 @@ const shots = [];
 function fireLaser(){
   if(player.laserCD>0 || player.charge>0) return;
   const speed = 900, life=0.6, dir=player.dir;
-  shots.push({x:player.x+dir*28, y:player.y-6, vx:dir*speed, vy:0, age:0, life, w:46, h:14, dmg:28, dir, type:'laser'});
+  shots.push({x:player.x+dir*28, y:player.y-8, vx:dir*speed, vy:0, age:0, life, w:46, h:14, dmg:28, dir, type:'laser'});
   player.laserCD = 0.22; setFace('attack', .25);
 }
 function startCharge(){ if(player.upgrades.burst) player.charge = Math.min(1.2, player.charge+0.04); }
 function releaseCharge(){
   if(!player.upgrades.burst || player.charge<=0.2) return;
   const power = Math.min(1, player.charge);
-  // radial burst: spawn 12 short-life rays
   for(let i=0;i<12;i++){
     const ang = i*(Math.PI*2/12);
     shots.push({x:player.x, y:player.y-10, vx:Math.cos(ang)*600*power, vy:Math.sin(ang)*480*power,
       age:0, life:0.35+0.2*power, w:28, h:10, dmg:18+16*power, dir:1, type:'burst', rot:ang});
   }
+  addSparks(player.x, player.y-10, null, 16, 'rgba(255,214,120,.95)');
   player.charge=0; setFace('attack', .3);
+}
+
+/* =========================================================
+   Mini-Boss: Heartfire Warden (Shadow Wraith)
+========================================================= */
+let warden = null, bossActive=false, bossDefeated=false, bossHP=300, bossMax=300, bossPhase=1;
+const bossUI = {wrap:document.getElementById('bossbar'), fill:document.getElementById('bossfill')};
+
+function spawnWarden(x){
+  const y = terrainY(x)-60;
+  warden = {x, y, vx:0, vy:0, core:1, t:0, atk:0, inv:0};
+  bossActive=true; bossHP=bossMax; bossPhase=1;
+  bossUI.wrap.style.display='flex';
+}
+
+function wardenAI(dt){
+  if(!warden) return;
+  warden.t += dt;
+  const dist = player.x - warden.x;
+  // floaty movement
+  warden.x += clamp(dist, -180, 180) * 0.4 * dt;
+  warden.y = terrainY(warden.x) - 80 + Math.sin(warden.t*1.6)*14;
+  // attacks: lash or comet
+  if((warden.atk-=dt)<=0){
+    if(Math.random()<0.5){
+      // lash: short-range swipe
+      shots.push({x:warden.x + Math.sign(dist)*20, y:warden.y-10, vx:Math.sign(dist)*520, vy:0, age:0, life:0.25, w:30, h:16, dmg:16, dir:Math.sign(dist), type:'w_lash'});
+    }else{
+      // comet: downward ember
+      shots.push({x:warden.x, y:warden.y, vx: (Math.random()*2-1)*60, vy: 240, age:0, life:1.1, w:16, h:16, dmg:14, dir:1, type:'w_comet'});
+    }
+    warden.atk = (bossPhase===3? 0.5 : 0.9);
+  }
+  warden.inv = Math.max(0, warden.inv - dt);
+}
+
+function damageWarden(dmg){
+  if(!warden||warden.inv>0) return;
+  bossHP = Math.max(0, bossHP - dmg);
+  warden.inv=0.12; addSparks(warden.x,warden.y-10,null,12,'rgba(255,120,140,.95)');
+  if(bossHP<=0){ bossDefeatCutscene(); }
+  else if(bossHP< bossMax*0.66 && bossPhase===1){ bossPhase=2; }
+  else if(bossHP< bossMax*0.33 && bossPhase===2){ bossPhase=3; }
 }
 
 /* =========================================================
@@ -352,7 +401,7 @@ function wantDash(){ return keys['ShiftLeft']||keys['ShiftRight']||keys['PAD_DAS
 function wantSword(){ return keys['KeyK']||keys['PAD_SWORD']; }
 function wantLaser(){ return keys['KeyJ']||keys['PAD_LASER']; }
 function wantInteract(){ return keys['Interact']||keys['PAD_INTER']; }
-function wantShield(){ return keys['PAD_SHIELD']||keys['KeyB']; } // keyboard B optional
+function wantShield(){ return keys['PAD_SHIELD']||keys['Shield']; }
 
 /* =========================================================
    Update
@@ -360,113 +409,98 @@ function wantShield(){ return keys['PAD_SHIELD']||keys['KeyB']; } // keyboard B 
 function update(dt){
   pollGamepad();
 
-  // face decay
+  // face decay + run bob
   player.faceTimer = Math.max(0, player.faceTimer - dt);
+  player.runBob += (player.onGround? dt*18 : dt*6);
+  player.footStep = (player.onGround && Math.abs(player.vx)>160)? (Math.sin(player.runBob)>0.95?1:0) : 0;
   if(player.faceTimer<=0) player.faceState = (player.onGround && (Math.abs(player.vx)>10))?'move':'calm';
 
   // horizontal movement
-  let mx = 0;
-  if(wantLeft()) mx -= 1;
-  if(wantRight()) mx += 1;
+  let mx = 0; if(wantLeft()) mx -= 1; if(wantRight()) mx += 1;
   player.dir = (mx!==0)? Math.sign(mx) : player.dir;
 
   const accel = player.onGround ? MOVE : MOVE*0.65;
   player.vx += mx*accel*dt;
-  player.vx *= player.onGround ? 0.86 : 0.98;
+  player.vx *= player.onGround ? 0.86 : 0.985;
   player.vy += GRAV*dt;
 
   // jump
-  if(wantJump() && player.onGround){
-    player.vy = -JUMP_V; player.onGround=false; player.canMidDash = player.upgrades.dash;
-  }
+  if(wantJump() && player.onGround){ player.vy = -JUMP_V; player.onGround=false; player.canMidDash = player.upgrades.dash; }
 
-  // dash (ground or mid-air once if unlocked)
+  // dash (ground/midair)
   if(wantDash()){
     if(player.onGround || (player.upgrades.dash && player.canMidDash)){
-      player.vx = player.dir * DASH_V;
+      player.vx = player.dir * DASH_V; player.dashTimer = 0.12;
       if(!player.onGround) player.canMidDash=false;
-      player.dashTimer = 0.12;
+      addSparks(player.x,player.y-8, player.dir===1?0:Math.PI, 10,'rgba(255,160,120,.9)');
     }
   }
   player.dashTimer = Math.max(0, player.dashTimer - dt);
 
-  // apply movement
-  player.x += player.vx*dt;
-  player.y += player.vy*dt;
-
-  // ground collision
+  // apply move + ground collision
+  player.x += player.vx*dt; player.y += player.vy*dt;
   const col = groundCollide(player.x, player.y, player.w, player.h);
-  if(col.hit){
-    player.y = col.y;
-    if(player.vy>0) player.onGround=true;
-    player.vy=0;
-  } else player.onGround=false;
+  if(col.hit){ player.y = col.y; if(player.vy>0) player.onGround=true; player.vy=0; } else player.onGround=false;
 
   // attacks
   if(wantSword()){ player.attackTimer = 0.18; setFace('attack', .22); }
   player.attackTimer = Math.max(0, player.attackTimer - dt);
 
-  // laser vs solar burst
-  if(wantLaser()){
-    if(player.upgrades.burst){ startCharge(); }
-    else fireLaser();
-  } else {
-    if(player.upgrades.burst && player.charge>0) releaseCharge();
-  }
+  // laser vs solar
+  if(wantLaser()){ if(player.upgrades.burst){ startCharge(); } else fireLaser(); }
+  else if(player.upgrades.burst && player.charge>0){ releaseCharge(); }
   player.laserCD = Math.max(0, player.laserCD - dt);
 
-  // vision (reveal hidden platforms)
-  if(player.upgrades.vision && wantInteract()){
-    player.visionTimer = 5.0; // seconds
-  }
+  // vision
+  if(player.upgrades.vision && wantInteract()) player.visionTimer = 5.0;
   player.visionTimer = Math.max(0, player.visionTimer - dt);
 
   // shield
-  if(player.upgrades.shield && wantShield() && player.shieldTimer<=0){
-    player.shieldTimer = 2.0;
-  }
+  if(player.upgrades.shield && wantShield() && player.shieldTimer<=0) player.shieldTimer = 2.0;
   player.shieldTimer = Math.max(0, player.shieldTimer - dt);
 
-  // shots move
+  // shots
   for(let i=shots.length-1;i>=0;i--){
     const s = shots[i];
     s.x += s.vx*dt; s.y += s.vy*dt; s.age += dt;
     if(s.type==='laser'){
-      const floor = terrainY(s.x) - 10;
-      if(s.y+4 > floor){ shots.splice(i,1); continue; }
+      const floor = terrainY(s.x) - 10; if(s.y+4 > floor){ shots.splice(i,1); continue; }
     }
+    if(s.type==='w_comet') s.vy += 900*dt;
     if(s.age>s.life){ shots.splice(i,1); continue; }
   }
 
-  // shrine interaction
+  // shrines
   for(const sh of shrines){
     sh.pulse += dt;
-    const dx = sh.x - player.x;
-    if(Math.abs(dx)<40 && Math.abs((player.y-10)-sh.y)<50){
-      if(!sh.purified && wantInteract()){
-        sh.purified = true;
-        if(sh.kind==='dash') player.upgrades.dash=true, document.getElementById('abDash').classList.remove('lock');
-        if(sh.kind==='burst') player.upgrades.burst=true, document.getElementById('abBurst').classList.remove('lock');
-        if(sh.kind==='vision') player.upgrades.vision=true, document.getElementById('abVision').classList.remove('lock');
-        if(sh.kind==='shield') player.upgrades.shield=true, document.getElementById('abShield').classList.remove('lock');
-        levelFlash = 0.8; // light wave
-      }
+    const close = Math.abs(sh.x-player.x)<48 && Math.abs(sh.y-(player.y-10))<50;
+    if(close && !sh.purified && wantInteract()){
+      sh.purified = true;
+      if(sh.kind==='dash') player.upgrades.dash=true, document.getElementById('abDash').classList.remove('lock');
+      if(sh.kind==='burst') player.upgrades.burst=true, document.getElementById('abBurst').classList.remove('lock');
+      if(sh.kind==='vision') player.upgrades.vision=true, document.getElementById('abVision').classList.remove('lock');
+      if(sh.kind==='shield') player.upgrades.shield=true, document.getElementById('abShield').classList.remove('lock');
+      levelFlash = 0.8;
+      addOrb(sh.x, sh.y-30, rand(18,26));
+      // trigger boss spawn near last shrine
+      if(sh.kind==='shield' && !bossActive && !bossDefeated){ spawnWarden(sh.x+220); }
     }
   }
 
   // enemies
   for(let i=enemies.length-1;i>=0;i--){
-    const e = enemies[i];
-    enemyAI(e, dt);
-    e.hit = Math.max(0, e.hit - dt);
-
-    // collide with shots
+    const e = enemies[i]; enemyAI(e, dt);
+    // projectiles vs enemies
     for(let k=shots.length-1;k>=0;k--){
       const s = shots[k];
+      if(s.type==='w_lash'||s.type==='w_comet') continue;
       const hit = (Math.abs(e.x-s.x)< (s.type==='burst'?32:36)) && (Math.abs(e.y-s.y)< (s.type==='burst'?26:28));
       if(hit){
         e.hp -= s.dmg; e.hit=0.12; shots.splice(k,1);
-        if(e.hp<=0){ addXP(rand(10,18)); enemies.splice(i,1); }
+        addSparks(e.x,e.y-8,null,6,'rgba(220,255,200,.9)');
+        if(e.hp<=0){
+          addXP(rand(10,18)); addOrb(e.x,e.y-10, rand(8,14)); enemies.splice(i,1);
+        }
         break;
       }
     }
@@ -475,27 +509,72 @@ function update(dt){
       const dx = e.x - player.x, dy = e.y - player.y;
       if(Math.abs(dy)<36 && Math.abs(dx)<42 && Math.sign(dx)===player.dir){
         e.hp -= 16; e.hit=0.1; e.vx += player.dir*240;
-        if(e.hp<=0){ addXP(rand(10,18)); enemies.splice(i,1); }
+        addSparks(e.x,e.y-8, null, 6,'rgba(255,230,200,.9)');
+        if(e.hp<=0){ addXP(rand(10,18)); addOrb(e.x,e.y-10, rand(8,14)); enemies.splice(i,1); }
       }
     }
-    // contact damage (blocked by shield)
+    // contact damage (shield blocks)
     const contact = Math.abs(e.x-player.x)<26 && Math.abs(e.y-player.y)<40;
     if(contact && player.invul<=0){
-      if(player.shieldTimer>0){
-        // reflect small knock
-        e.vx += (e.x<player.x?-1:1)*180;
-      } else {
-        player.hp = Math.max(0, player.hp-10);
-        player.invul = 0.9; setFace('hurt', .35);
+      if(player.shieldTimer>0){ e.vx += (e.x<player.x?-1:1)*180; }
+      else { player.hp = Math.max(0, player.hp-10); player.invul = 0.9; setFace('hurt', .35); cam.shake=0.2; }
+    }
+  }
+
+  // orbs seek player
+  for(let i=orbs.length-1;i>=0;i--){
+    const o = orbs[i];
+    o.age+=dt; o.vy += o.g*dt; o.x += o.vx*dt; o.y += o.vy*dt;
+    // gentle attraction if close
+    const dx=player.x-o.x, dy=(player.y-12)-o.y, d=Math.hypot(dx,dy)||1;
+    if(d<160){ o.vx += (dx/d)*220*dt; o.vy += (dy/d)*220*dt; }
+    if(d<20){ addXP(o.amt); orbs.splice(i,1); continue; }
+    // ground bounce
+    const gy = terrainY(o.x)-6; if(o.y>gy){ o.y=gy; o.vy*=-0.35; o.vx*=0.8; }
+    if(o.age>o.life) orbs.splice(i,1);
+  }
+
+  // sparks
+  for(let i=sparks.length-1;i>=0;i--){
+    const p=sparks[i]; p.age+=dt; p.vy += 900*dt*0.6; p.x+=p.vx*dt; p.y+=p.vy*dt; if(p.age>p.life) sparks.splice(i,1);
+  }
+
+  // boss
+  if(bossActive){ wardenAI(dt); bossUI.fill.style.width = (bossHP/bossMax*100)+'%'; }
+
+  // player vs boss attacks
+  if(bossActive){
+    for(let i=shots.length-1;i>=0;i--){
+      const s=shots[i];
+      if((s.type==='w_lash' || s.type==='w_comet') && Math.abs((s.x)-(player.x))<28 && Math.abs((s.y)-(player.y))<34){
+        if(player.invul<=0){
+          if(player.shieldTimer>0){ /* absorb */ } else { player.hp=Math.max(0,player.hp-12); player.invul=0.9; cam.shake=0.25; }
+        }
       }
     }
   }
 
-  // invulnerability timer
-  player.invul = Math.max(0, player.invul - dt);
+  // player attacks vs boss
+  if(bossActive && warden){
+    // shots
+    for(let i=shots.length-1;i>=0;i--){
+      const s=shots[i];
+      if(s.type==='laser' || s.type==='burst'){
+        if(Math.abs(s.x-warden.x)<40 && Math.abs(s.y-warden.y)<46){
+          damageWarden(s.dmg); shots.splice(i,1);
+        }
+      }
+    }
+    // melee
+    if(player.attackTimer>0 && Math.abs(player.x-warden.x)<46 && Math.abs(player.y-warden.y)<48){
+      damageWarden(18); addSparks(warden.x,warden.y-10,null,10,'rgba(255,160,160,.95)');
+    }
+  }
 
-  // camera lead
+  // invulnerability + camera
+  player.invul = Math.max(0, player.invul - dt);
   camUpdate(dt, player.x + player.dir*120, player.y - 40);
+  if(cam.shake>0){ cam.shake-=dt; }
 
   // UI
   document.getElementById('hpfill').style.width = (player.hp/player.maxhp*100)+'%';
@@ -505,127 +584,92 @@ function update(dt){
 /* =========================================================
    XP / Leveling
 ========================================================= */
+let levelFlash=0;
 function addXP(v){
   player.xp += v;
   if(player.xp >= player.nextXP){
-    player.xp -= player.nextXP;
-    player.lvl++;
-    player.nextXP = Math.round(player.nextXP*1.35);
-    player.maxhp += 5; player.hp = Math.min(player.maxhp, player.hp+12);
+    player.xp -= player.nextXP; player.lvl++; player.nextXP = Math.round(player.nextXP*1.35);
+    player.maxhp += 6; player.hp = Math.min(player.maxhp, player.hp+14);
     levelFlash=0.9; document.getElementById('lvl').textContent = 'LVL '+player.lvl;
   }
 }
-let levelFlash = 0;
 
 /* =========================================================
-   Hidden platforms for Aether Vision
+   Hidden Platforms (Vision)
 ========================================================= */
 function drawHiddenPlatforms(){
   if(player.visionTimer<=0) return;
-  const w=cv.width,h=cv.height;
+  const w=cv.width,h=cv.height, t=nowSec();
   const startX = cam.x - w/2 - 100, endX = cam.x + w/2 + 100;
-  cx.fillStyle='rgba(120,180,255,.35)';
+  cx.fillStyle='rgba(120,180,255,.38)';
   for(let i=0;i<6;i++){
-    const x = (i*420) + 200;
+    const x = (i*420) + 240;
     if(x<startX||x>endX) continue;
-    const y = terrainY(x) - 120 - 40*Math.sin(i+performance.now()/900);
+    const y = terrainY(x) - 120 - 40*Math.sin(i+t*0.9);
     cx.fillRect(x-40 - cam.x + w/2, y - cam.y + h/2, 80,8);
   }
 }
 
 /* =========================================================
-   Rendering — Hero, Enemies, Shots, Shrines
+   Rendering — Hero, Enemies, Boss, Shots, FX, Shrines
 ========================================================= */
 function drawHero(t){
   const w=cv.width,h=cv.height;
-  const px = player.x - cam.x + w/2, py = player.y - cam.y + h/2;
+  let px = player.x - cam.x + w/2, py = player.y - cam.y + h/2;
+  // camera shake
+  if(cam.shake>0){ px += (Math.random()*2-1)*6*cam.shake; py += (Math.random()*2-1)*4*cam.shake; }
 
   // shadow
-  cx.fillStyle='rgba(0,0,0,.35)';
-  cx.beginPath(); cx.ellipse(px,py+player.h/2-4, 26,10, 0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px,py+player.h/2-4, 26,10, 0,0,Math.PI*2); cx.fill();
 
   // cape physics
   const anchor = { x: px - player.dir*6, y: py-16 };
-  const wind = 60 * (player.vx/360);
-  const g = 900;
+  const wind = 70 * (player.vx/360), g = 900, damp=0.9;
   for(let i=0;i<player.cape.length;i++){
     const p = player.cape[i];
-    if(i===0){
-      const tx = anchor.x - player.dir*14, ty = anchor.y + 4;
-      p.vx += (tx - p.x)*20*0.016 + wind*0.016;
-      p.vy += (ty - p.y)*20*0.016 + g*0.016;
-    } else {
-      p.vy += g*0.016;
-      p.vx += wind*0.01;
-    }
-    p.vx *= 0.92; p.vy *= 0.92;
-    p.x += p.vx; p.y += p.vy;
+    if(i===0){ const tx = anchor.x - player.dir*14, ty = anchor.y + 4; p.vx += (tx - p.x)*0.32 + wind*0.016; p.vy += (ty - p.y)*0.32 + g*0.016; }
+    else { p.vy += g*0.016; p.vx += wind*0.01; }
+    p.vx *= damp; p.vy *= damp; p.x += p.vx; p.y += p.vy;
     const prev = i===0? anchor : player.cape[i-1];
-    const dx = p.x-prev.x, dy=p.y-prev.y, d=Math.hypot(dx,dy)||1;
-    const rest = 20, off = (d-rest)/d;
+    const dx = p.x-prev.x, dy=p.y-prev.y, d=Math.hypot(dx,dy)||1, rest=20, off=(d-rest)/d;
     p.x -= dx*off*0.5; p.y -= dy*off*0.5;
   }
   if(player.cape[0].x===0){ for(const p of player.cape){ p.x=anchor.x-12; p.y=anchor.y+8; } }
 
   // cape draw
-  cx.save(); cx.beginPath();
-  cx.moveTo(anchor.x, anchor.y);
+  cx.save(); cx.beginPath(); cx.moveTo(anchor.x, anchor.y);
   cx.quadraticCurveTo(player.cape[0].x,player.cape[0].y, player.cape[1].x,player.cape[1].y);
   const grad = cx.createLinearGradient(anchor.x,anchor.y, player.cape[1].x,player.cape[1].y);
   grad.addColorStop(0,'#b01724'); grad.addColorStop(1,'#ff606b');
-  cx.strokeStyle='#e7c766'; cx.lineWidth=3; cx.fillStyle=grad;
-  cx.fill(); cx.stroke(); cx.restore();
+  cx.strokeStyle='#e7c766'; cx.lineWidth=3; cx.fillStyle=grad; cx.fill(); cx.stroke(); cx.restore();
 
-  // body
+  // run bob
+  const bob = (player.onGround? Math.sin(player.runBob)*2 : -2);
+
+  // body (armor chest)
   const body = cx.createLinearGradient(px-14,py-18, px+14,py+22);
   body.addColorStop(0,'#ff606b'); body.addColorStop(1,'#b01724');
-  cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24,32,46,12); cx.fill();
+  cx.fillStyle=body; cx.beginPath(); cx.roundRect(px-16,py-24+bob,32,46,12); cx.fill();
 
-  // shoulders
-  cx.fillStyle='#e7c766'; cx.beginPath(); cx.roundRect(px-20,py-24,14,12,6); cx.fill();
-  cx.beginPath(); cx.roundRect(px+6,py-24,14,12,6); cx.fill();
+  // shoulders (gold)
+  cx.fillStyle='#e7c766'; cx.beginPath(); cx.roundRect(px-20,py-24+bob,14,12,6); cx.fill();
+  cx.beginPath(); cx.roundRect(px+6,py-24+bob,14,12,6); cx.fill();
 
-  // head & hair
-  const head = cx.createRadialGradient(px-4,py-24,5, px,py-12,16);
-  head.addColorStop(0,'#ffe1c7'); head.addColorStop(1,'#cc9c70');
-  cx.fillStyle=head; cx.beginPath(); cx.arc(px,py-16,12,0,Math.PI*2); cx.fill();
-  cx.fillStyle='#cc9c70'; // ears
-  cx.beginPath(); cx.moveTo(px-16,py-18); cx.lineTo(px-22,py-20); cx.lineTo(px-16,py-10); cx.closePath(); cx.fill();
-  cx.beginPath(); cx.moveTo(px+16,py-18); cx.lineTo(px+22,py-20); cx.lineTo(px+16,py-10); cx.closePath(); cx.fill();
-  cx.fillStyle='#121316'; cx.beginPath(); cx.arc(px,py-20,13,Math.PI,0); cx.fill(); // hair
-  cx.fillStyle='rgba(255,255,255,.12)'; cx.fillRect(px-8,py-24,16,3);
-
-  // face (expressions)
-  cx.save(); cx.translate(px, py-16);
-  const fs = player.faceState;
-  cx.fillStyle='#000';
-  if(fs==='hurt'){ cx.fillRect(-6,-2,4,2); cx.fillRect(2,-2,4,2); }
-  else if(fs==='attack'){ cx.fillRect(-6,-4,4,3); cx.fillRect(2,-4,4,3); }
-  else if(fs==='move'){ cx.fillRect(-6,-3,4,3); cx.fillRect(2,-3,4,3); }
-  else { cx.fillRect(-6,-2,3,2); cx.fillRect(3,-2,3,2); }
-  cx.fillStyle='#191919';
-  if(fs==='attack'){ cx.fillRect(-7,-7,6,2); cx.fillRect(1,-7,6,2); }
-  else if(fs==='hurt'){ cx.fillRect(-7,-6,6,2); cx.fillRect(1,-6,6,2); }
-  else if(fs==='move'){ cx.fillRect(-7,-6,6,2); cx.fillRect(1,-6,6,2); }
-  else { cx.fillRect(-7,-6,5,2); cx.fillRect(2,-6,5,2); }
-  cx.fillStyle='#a33';
-  if(fs==='attack'){ cx.fillRect(-2,1,4,3); }
-  else if(fs==='hurt'){ cx.fillRect(-3,1,6,2); }
-  else { cx.fillRect(-2,2,4,2); }
-  cx.restore();
+  // helmet (semi-realistic, glowing visor)
+  cx.fillStyle='#6b0f17'; cx.beginPath(); cx.roundRect(px-14,py-42+bob,28,20,8); cx.fill();
+  cx.fillStyle='#b01724'; cx.beginPath(); cx.roundRect(px-16,py-44+bob,32,10,8); cx.fill();
+  cx.fillStyle='rgba(255,180,120,.9)'; cx.fillRect(px-8,py-34+bob,16,3); // visor slit
+  // feather ridge / crest
+  cx.fillStyle='#e7c766'; cx.fillRect(px-2,py-46+bob,4,6);
 
   // arms + hands
-  cx.fillStyle='#b01724';
-  cx.beginPath(); cx.roundRect(px+10,py-16,14,8,4); cx.fill();
-  cx.beginPath(); cx.roundRect(px-24,py-16,14,8,4); cx.fill();
-  cx.fillStyle='#cc9c70';
-  cx.beginPath(); cx.roundRect(px+20,py-12,8,6,3); cx.fill();
-  cx.beginPath(); cx.roundRect(px-26,py-12,8,6,3); cx.fill();
-  cx.fillStyle='#ffe1c7'; cx.fillRect(px+21,py-10,2,4); cx.fillRect(px+24,py-10,2,4);
-  cx.fillRect(px-25,py-10,2,4); cx.fillRect(px-22,py-10,2,4);
+  cx.fillStyle='#b01724'; cx.beginPath(); cx.roundRect(px+10,py-16+bob,14,8,4); cx.fill();
+  cx.beginPath(); cx.roundRect(px-24,py-16+bob,14,8,4); cx.fill();
+  cx.fillStyle='#cc9c70'; cx.beginPath(); cx.roundRect(px+20,py-12+bob,8,6,3); cx.fill();
+  cx.beginPath(); cx.roundRect(px-26,py-12+bob,8,6,3); cx.fill();
 
   // sword
-  cx.save(); cx.translate(px + player.dir*20, py-10);
+  cx.save(); cx.translate(px + player.dir*20, py-10+bob);
   const ang = (player.dir===1)? 0 : Math.PI;
   cx.rotate(ang + Math.sin(t*22)*0.06);
   const bladeGrad = cx.createLinearGradient(0,0,28,0);
@@ -637,12 +681,12 @@ function drawHero(t){
 
   // melee arc
   if(player.attackTimer>0){
-    cx.strokeStyle='rgba(255,255,255,.9)'; cx.lineWidth=4;
+    cx.strokeStyle='rgba(255,255,255,.95)'; cx.lineWidth=4;
     const a0 = (player.dir===1)? -0.1 : Math.PI-0.1;
     const swing = Math.sin((1-player.attackTimer)*Math.PI)*0.9;
-    cx.beginPath(); cx.arc(px,py-6, 46, a0 - swing, a0 + swing); cx.stroke();
-    cx.strokeStyle='rgba(255,74,87,.75)'; cx.lineWidth=2;
-    cx.beginPath(); cx.arc(px,py-6, 54, a0 - swing*0.8, a0 + swing*0.8); cx.stroke();
+    cx.beginPath(); cx.arc(px,py-6+bob, 46, a0 - swing, a0 + swing); cx.stroke();
+    cx.strokeStyle='rgba(255,74,87,.8)'; cx.lineWidth=2;
+    cx.beginPath(); cx.arc(px,py-6+bob, 54, a0 - swing*0.8, a0 + swing*0.8); cx.stroke();
   }
 
   // shield aura
@@ -651,16 +695,16 @@ function drawHero(t){
     cx.beginPath(); cx.arc(px,py-10, 36, 0, Math.PI*2); cx.stroke();
   }
 
-  if(player.invul>0){
-    cx.fillStyle='rgba(255,255,255,.18)';
-    cx.fillRect(px-20,py-40,40,56);
-  }
+  // hurt blink
+  if(player.invul>0){ cx.fillStyle='rgba(255,255,255,.18)'; cx.fillRect(px-20,py-40,40,56); }
 }
+
 function drawEnemies(t){
   const w=cv.width,h=cv.height;
   for(const e of enemies){
     const px = e.x - cam.x + w/2, py = e.y - cam.y + h/2;
     cx.fillStyle='rgba(0,0,0,.3)'; cx.beginPath(); cx.ellipse(px,py+18, 18,8,0,0,Math.PI*2); cx.fill();
+
     if(e.type==='crawler'){
       const bob = Math.sin(t*6 + e.x*0.01)*2;
       const g = cx.createLinearGradient(px-16,py-10, px+16,py+16);
@@ -673,7 +717,7 @@ function drawEnemies(t){
       cx.fillStyle='#504640'; cx.fillRect(px-16,py-14,14,14);
       cx.fillStyle='#fff'; cx.fillRect(px+8,py-6,4,2);
       cx.fillStyle='#ff4444'; cx.fillRect(px+12,py-2+step,8,3);
-    } else {
+    } else { // bramble
       const pulse = 0.5+0.5*Math.sin(t*10);
       cx.fillStyle='#1f5d2a'; cx.beginPath(); cx.roundRect(px-18,py-18,36,36,12); cx.fill();
       cx.strokeStyle='#2f8d3e'; cx.lineWidth=3;
@@ -684,51 +728,85 @@ function drawEnemies(t){
     if(e.hit>0){ cx.fillStyle='rgba(255,255,255,.25)'; cx.fillRect(px-22,py-22,44,44); }
   }
 }
+
+function drawWarden(t){
+  if(!warden) return;
+  const w=cv.width,h=cv.height;
+  const px=warden.x - cam.x + w/2, py=warden.y - cam.y + h/2;
+
+  // smoky lower body
+  const pulse = 0.5+0.5*Math.sin(t*6);
+  cx.fillStyle=`rgba(30,30,40,${0.5+0.25*pulse})`;
+  cx.beginPath(); cx.ellipse(px,py+24, 26,14,0,0,Math.PI*2); cx.fill();
+
+  // core aura color by phase
+  const c = (bossPhase===1)? 'rgba(255,90,90,.8)' : (bossPhase===2? 'rgba(255,190,120,.85)' : 'rgba(255,255,255,.9)');
+  cx.strokeStyle=c; cx.lineWidth=3;
+  cx.beginPath(); cx.arc(px,py-10, 42, 0, Math.PI*2); cx.stroke();
+
+  // spectral body
+  const g = cx.createLinearGradient(px-20,py-40, px+20,py+40);
+  g.addColorStop(0,'#0b0d12'); g.addColorStop(1,'#1a1f2b');
+  cx.fillStyle=g; cx.beginPath(); cx.roundRect(px-24,py-44,48,72,18); cx.fill();
+
+  // ember veins
+  cx.strokeStyle=c; cx.lineWidth=2; cx.globalAlpha=0.8;
+  for(let i=0;i<5;i++){
+    cx.beginPath(); cx.moveTo(px,py); cx.lineTo(px+Math.cos(t*2+i)*18, py-30 + Math.sin(t*2+i)*12); cx.stroke();
+  }
+  cx.globalAlpha=1;
+
+  // face void + eyes
+  cx.fillStyle='#06070a'; cx.fillRect(px-12,py-36,24,14);
+  cx.fillStyle=c; cx.fillRect(px-8,py-32,8,4); cx.fillRect(px+2,py-32,8,4);
+}
+
 function drawShots(){
   const w=cv.width,h=cv.height;
   for(const s of shots){
     const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
     cx.save(); cx.translate(px,py);
-    if(s.type==='burst' && s.rot) cx.rotate(s.rot);
-    else cx.rotate((s.dir===1)?0:Math.PI);
+    if(s.rot) cx.rotate(s.rot); else cx.rotate((s.dir===1)?0:Math.PI);
     const grad = cx.createLinearGradient(-10,0,s.w+6,0);
-    grad.addColorStop(0,'rgba(255,255,255,.95)');
-    grad.addColorStop(0.5,'rgba(255,230,230,.85)');
-    grad.addColorStop(1, s.type==='burst' ? 'rgba(255,214,90,.9)' : 'rgba(255,74,87,.85)');
-    cx.fillStyle=grad;
-    cx.beginPath(); cx.roundRect(0,-s.h/2, s.w, s.h, s.h/2); cx.fill();
-    cx.globalAlpha=0.35; cx.fillStyle=s.type==='burst'?'rgba(255,214,90,1)':'rgba(255,74,87,1)';
-    cx.fillRect(-18,-(s.h/2)*0.6,18,(s.h)*0.6);
+    if(s.type==='w_lash'||s.type==='w_comet'){
+      grad.addColorStop(0,'rgba(255,100,120,.95)'); grad.addColorStop(1,'rgba(255,210,160,.9)');
+    } else {
+      grad.addColorStop(0,'rgba(255,255,255,.95)'); grad.addColorStop(0.5,'rgba(255,230,230,.85)');
+      grad.addColorStop(1, s.type==='burst' ? 'rgba(255,214,90,.9)' : 'rgba(255,74,87,.85)');
+    }
+    cx.fillStyle=grad; cx.beginPath(); cx.roundRect(0,-(s.h||12)/2, s.w||24, s.h||12, (s.h||12)/2); cx.fill();
     cx.restore();
   }
 }
+
 function drawShrines(t){
   const w=cv.width,h=cv.height;
   for(const s of shrines){
     const px = s.x - cam.x + w/2, py = s.y - cam.y + h/2;
-    // base monolith
     cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px,py+20,18,8,0,0,Math.PI*2); cx.fill();
     const grad = cx.createLinearGradient(px-12,py-40, px+12,py+20);
     if(s.purified){ grad.addColorStop(0,'#d7f0ff'); grad.addColorStop(1,'#64b1ff'); }
     else { grad.addColorStop(0,'#ffb0b0'); grad.addColorStop(1,'#9b2f2f'); }
     cx.fillStyle=grad; cx.beginPath(); cx.roundRect(px-12,py-40,24,60,8); cx.fill();
-    // glyph
     cx.fillStyle= s.purified ? 'rgba(255,255,255,.9)':'rgba(255,180,180,.9)';
-    cx.fillRect(px-2,py-28,4,18);
-    cx.fillRect(px-8,py-14,16,4);
-    // pulse aura
+    cx.fillRect(px-2,py-28,4,18); cx.fillRect(px-8,py-14,16,4);
     const a = (Math.sin(s.pulse*2)+1)/2;
     cx.strokeStyle= s.purified ? `rgba(140,200,255,${0.35+a*0.25})` : `rgba(255,120,120,${0.35+a*0.25})`;
     cx.lineWidth=3; cx.beginPath(); cx.arc(px,py, 46+6*a, 0, Math.PI*2); cx.stroke();
-
-    // prompt
     const close = Math.abs(s.x-player.x)<50 && Math.abs(s.y-(player.y-10))<50 && !s.purified;
-    if(close){
-      cx.fillStyle='rgba(255,255,255,.9)';
-      cx.fillRect(px-18,py-58,36,16);
-      cx.fillStyle='#0b0d10'; cx.font=`${12*DPR}px system-ui`;
-      cx.fillText('Press E', px-14, py-46);
-    }
+    if(close){ cx.fillStyle='rgba(255,255,255,.9)'; cx.fillRect(px-18,py-58,36,16); cx.fillStyle='#0b0d10'; cx.font=`${12*DPR}px system-ui`; cx.fillText('Press E', px-14, py-46); }
+  }
+}
+
+function drawFX(){
+  const w=cv.width,h=cv.height;
+  // orbs
+  for(const o of orbs){ const px=o.x - cam.x + w/2, py=o.y - cam.y + h/2;
+    cx.fillStyle='rgba(255,220,120,.9)'; cx.beginPath(); cx.arc(px,py,4,0,Math.PI*2); cx.fill();
+  }
+  // sparks
+  for(const p of sparks){ const px=p.x - cam.x + w/2, py=p.y - cam.y + h/2;
+    cx.globalAlpha = 1 - (p.age/p.life); cx.fillStyle=p.color; cx.fillRect(px,py,2,2); cx.globalAlpha=1;
   }
 }
 
@@ -738,45 +816,47 @@ function drawShrines(t){
 function postFX(time){
   const w=cv.width,h=cv.height;
   const g=cx.createRadialGradient(w/2,h/2, h*.4, w/2,h/2, h*.72);
-  g.addColorStop(0,'rgba(0,0,0,0)');
-  g.addColorStop(1,'rgba(0,0,0,.55)');
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.55)');
   cx.fillStyle=g; cx.fillRect(0,0,w,h);
   if(levelFlash>0){
-    cx.fillStyle=`rgba(255,255,200,${levelFlash*0.4})`;
-    cx.fillRect(0,0,w,h);
+    cx.fillStyle=`rgba(255,255,200,${levelFlash*0.4})`; cx.fillRect(0,0,w,h);
     levelFlash = Math.max(0, levelFlash - 0.02);
   }
-  cx.fillStyle='rgba(255,255,255,.035)';
-  for(let y=0;y<h;y+=3) cx.fillRect(0,y,w,1);
+  // scanlines
+  cx.fillStyle='rgba(255,255,255,.035)'; for(let y=0;y<h;y+=3) cx.fillRect(0,y,w,1);
 }
 
 /* =========================================================
-   Pause & Intro
+   Pause & Story Intro
 ========================================================= */
 const pauseUI = document.getElementById('pause');
-function togglePause(){ paused=!paused; pauseUI.style.display = paused?'flex':'none'; }
+function togglePause(){ if(!started) return; paused=!paused; pauseUI.style.display = paused?'flex':'none'; }
 
 const introEl = document.getElementById('intro');
 function runIntro(){
-  const l1=document.getElementById('l1'), l2=document.getElementById('l2'), l3=document.getElementById('l3');
-  setTimeout(()=>l1.classList.add('show'), 300);
-  setTimeout(()=>l2.classList.add('show'), 2000);
-  setTimeout(()=>l3.classList.add('show'), 3800);
+  const l0=document.getElementById('logo'), l1=document.getElementById('l1'), l2=document.getElementById('l2'), l3=document.getElementById('l3');
+  setTimeout(()=>l0.classList.add('show'), 300);
+  setTimeout(()=>l1.classList.add('show'), 900);
+  setTimeout(()=>l2.classList.add('show'), 2100);
+  setTimeout(()=>l3.classList.add('show'), 3300);
 }
 runIntro();
-function beginGame(){
-  if(started) return; started=true;
-  introEl.style.display='none';
-  musicPlay();
+function beginGame(){ if(started) return; started=true; introEl.style.display='none'; musicPlay(); }
+
+/* =========================================================
+   Cutscene: Boss Defeat → Heartfire Rekindle
+========================================================= */
+function bossDefeatCutscene(){
+  bossDefeated=true; bossActive=false; warden=null; document.getElementById('bossbar').style.display='none';
+  cutscene=true; setTimeout(()=>{ cutscene=false; }, 5500);
 }
 
 /* =========================================================
-   Music (8-bit chiptune orchestra, base64 inline)
-   Autostarts on first input to avoid autoplay block
+   Music (8-bit chiptune orchestra, inline)
 ========================================================= */
 const music = new Audio();
-music.loop = true; music.volume = 0.25;
-// Tiny chiptune-ish loop (very small WAV, placeholder melody)
+music.loop = true; music.volume = 0.26;
+/* Tiny placeholder loop (replace with longer base64 later if desired) */
 music.src = "data:audio/wav;base64,UklGRqQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YWCDAAAAgICAf39/f39/gICAf4CAgH9/f39/f4CAgICAf39/gICAf39/f4CAgICAf4CAgH9/f39/f4CAgICAf39/gICAf39/f4CAgICAf39/gICAf39/f4CAgICAf39/gICA";
 function musicPlay(){ try{ music.play().catch(()=>{}); }catch(e){} }
 
@@ -784,19 +864,31 @@ function musicPlay(){ try{ music.play().catch(()=>{}); }catch(e){} }
    Main Loop
 ========================================================= */
 function frame(){
-  const now = performance.now()/1000, dt = Math.min(0.033, now-last); last=now;
+  const t = nowSec(), dt = Math.min(0.033, t-last); last=t;
   cx.clearRect(0,0,cv.width,cv.height);
 
   if(!paused && started) update(dt);
 
-  drawBackground(now);
-  drawGround(now);
+  drawBackground(t);
+  drawGround(t);
   if(player.visionTimer>0) drawHiddenPlatforms();
-  drawShrines(now);
-  drawEnemies(now);
+  drawShrines(t);
+  if(bossActive) drawWarden(t);
+  drawEnemies(t);
   drawShots();
-  drawHero(now);
-  postFX(now);
+  drawHero(t);
+  drawFX();
+  postFX(t);
+
+  // boss encounter hint: if player passes X and boss not spawned (fallback)
+  if(!bossActive && !bossDefeated && player.x>3600){ spawnWarden( player.x+120 ); }
+
+  // simple cutscene flash
+  if(cutscene){
+    cx.fillStyle='rgba(255,255,230,.25)'; cx.fillRect(0,0,cv.width,cv.height);
+    cx.fillStyle='rgba(255,255,255,.9)'; cx.font=`${16*DPR}px system-ui`;
+    cx.fillText('The Heartfire brightens… Aeloria breathes again.', 20*DPR, 40*DPR);
+  }
 
   requestAnimationFrame(frame);
 }

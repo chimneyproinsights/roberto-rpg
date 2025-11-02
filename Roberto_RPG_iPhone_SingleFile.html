@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+  <title>Roberto RPG (Single-File)</title>
+  <style>
+    html,body{margin:0;height:100%;background:#0e0e12;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    #wrap{display:flex;flex-direction:column;height:100%}
+    header{padding:10px 12px;background:#14141c;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .btn{background:#2c2c3a;border:1px solid #3b3b52;border-radius:10px;color:#fff;padding:8px 12px;font-weight:600}
+    .btn:active{transform:scale(.98)}
+    #game{flex:1;display:flex;align-items:center;justify-content:center}
+    canvas{background:#1b1b28;border:2px solid #2f2f46;border-radius:10px;touch-action:none}
+    #pad{position:fixed;left:10px;bottom:10px;display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:6px;opacity:.9}
+    #pad button{width:60px;height:60px;border-radius:14px;background:#1f2233;border:1px solid #3a3f63;color:#fff;font-size:18px}
+    #pad .empty{background:transparent;border:none}
+    #acts{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;opacity:.9}
+    #acts button{width:84px;height:60px;border-radius:14px;background:#1f2233;border:1px solid #3a3f63;color:#fff;font-size:16px}
+    #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222b3d;border:1px solid #3a4a6a;padding:8px 12px;border-radius:8px;display:none}
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <div><strong>Roberto RPG</strong> — single-file mobile demo</div>
+    <div style="display:flex;gap:8px;">
+      <button id="btnFull" class="btn">Fullscreen</button>
+      <button id="btnSound" class="btn">Sound: Off</button>
+    </div>
+  </header>
+  <div id="game">
+    <canvas id="cv" width="480" height="320"></canvas>
+  </div>
+</div>
+
+<div id="pad" aria-label="move">
+  <button class="empty" disabled></button>
+  <button data-key="ArrowUp">▲</button>
+  <button class="empty" disabled></button>
+  <button data-key="ArrowLeft">◀</button>
+  <button data-key="ArrowDown">▼</button>
+  <button data-key="ArrowRight">▶</button>
+  <button class="empty" disabled></button>
+  <button data-key="Dash">⤴︎</button>
+  <button class="empty" disabled></button>
+</div>
+<div id="acts">
+  <button data-key="Interact">Interact</button>
+  <button data-key="Attack">Attack</button>
+</div>
+<div id="toast"></div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+const tile = 32;
+const cols = Math.floor(W / tile);
+const rows = Math.floor(H / tile);
+
+const map = [];
+for (let r=0;r<rows;r++){
+  map[r] = [];
+  for (let c=0;c<cols;c++){
+    const wall = (r==0||c==0||r==rows-1||c==cols-1|| (r%4==0 && c%6==0));
+    map[r][c] = wall ? 1 : 0;
+  }
+}
+
+const player = {x: tile*2, y: tile*2, w: 22, h: 22, speed: 2.1, dash: 4.0, color:'#58f1a7', vx:0, vy:0};
+const enemy = {x: tile*(cols-3), y: tile*(rows-3), w: 22, h: 22, color:'#ff6b6b', t:0};
+
+let keys = {};
+let audioEnabled = false;
+let swordSound;
+
+function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
+function tileAt(px,py){
+  const c = Math.floor(px / tile);
+  const r = Math.floor(py / tile);
+  if (r<0||c<0||r>=rows||c>=cols) return 1;
+  return map[r][c];
+}
+function collide(obj, nx, ny){
+  const left = tileAt(nx, obj.y);
+  const right = tileAt(nx+obj.w, obj.y);
+  const downL = tileAt(nx, ny+obj.h);
+  const downR = tileAt(nx+obj.w, ny+obj.h);
+  return (left||right||downL||downR);
+}
+
+function update(){
+  const speed = keys['Dash'] ? player.dash : player.speed;
+  player.vx = (keys['ArrowRight']?1:0) - (keys['ArrowLeft']?1:0);
+  player.vy = (keys['ArrowDown']?1:0) - (keys['ArrowUp']?1:0);
+  let nx = player.x + player.vx * speed;
+  let ny = player.y + player.vy * speed;
+  if (!collide(player, nx, player.y)) player.x = nx;
+  if (!collide(player, player.x, ny)) player.y = ny;
+
+  enemy.t += 0.02;
+  enemy.x += Math.cos(enemy.t)*0.5;
+  enemy.y += Math.sin(enemy.t)*0.5;
+}
+
+function draw(){
+  ctx.fillStyle = '#101221';
+  ctx.fillRect(0,0,W,H);
+  for (let r=0;r<rows;r++){
+    for (let c=0;c<cols;c++){
+      ctx.fillStyle = map[r][c] ? '#23283f' : '#14182b';
+      ctx.fillRect(c*tile, r*tile, tile, tile);
+    }
+  }
+  rect(player.x, player.y, player.w, player.h, player.color);
+  rect(enemy.x, enemy.y, enemy.w, enemy.h, enemy.color);
+  requestAnimationFrame(loop);
+}
+
+function loop(){
+  update();
+  draw();
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none',1200);
+}
+
+function initAudio(){
+  if (audioEnabled) return;
+  const ac = new (window.AudioContext||window.webkitAudioContext)();
+  function beep(freq, dur=0.08){
+    const o=ac.createOscillator();const g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    o.type='square';o.frequency.value=freq;g.gain.value=0.08;
+    o.start(); setTimeout(()=>{o.stop();}, dur*1000);
+  }
+  swordSound = ()=>beep(440,0.12);
+  audioEnabled = true;
+  toast('Sound On');
+  document.getElementById('btnSound').textContent='Sound: On';
+}
+
+document.addEventListener('keydown',e=>{keys[e.key]=true;});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+document.getElementById('btnFull').addEventListener('click',()=>{
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+});
+document.getElementById('btnSound').addEventListener('click', initAudio);
+
+function bindPad(){
+  document.querySelectorAll('#pad [data-key], #acts [data-key]').forEach(btn=>{
+    const k = btn.getAttribute('data-key');
+    const on = (e)=>{e.preventDefault(); keys[k]=true; if(k==='Attack'&&audioEnabled) swordSound();};
+    const off = (e)=>{e.preventDefault(); keys[k]=false;};
+    btn.addEventListener('touchstart', on, {passive:false});
+    btn.addEventListener('touchend', off, {passive:false});
+    btn.addEventListener('mousedown', on);
+    btn.addEventListener('mouseup', off);
+    btn.addEventListener('mouseleave', off);
+  });
+}
+bindPad();
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

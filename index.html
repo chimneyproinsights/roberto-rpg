@@ -68,7 +68,7 @@ addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.name='None';do
 /* ===== Quick Canvas Textures ===== */
 function makeTex(scene,key,w,h,paint){const t=scene.textures.createCanvas(key,w,h);const c=t.getContext();paint(c,w,h);t.refresh();}
 function dots(c,n,colors){for(let i=0;i<n;i++){c.fillStyle=colors[i%colors.length];c.fillRect((Math.random()*32)|0,(Math.random()*32)|0,1,1);}}
-/* Tiles: 0 grass,1 path,2 water,3 tree,4 portal,5 wall,6 floor,7 door */
+// Tiles: 0 grass,1 path,2 water,3 tree,4 portal,5 wall,6 floor,7 door
 function tileKey(id){return id===0?'grass':id===1?'path':id===2?'water':id===3?'tree':id===4?'portal':id===5?'wall':id===6?'floor':id===7?'door':'grass'}
 function solid(id){return (id===2||id===3||id===5||id===7)}
 
@@ -85,8 +85,8 @@ class Boot extends Phaser.Scene{
     makeTex(this,'tree',32,40,(c,w,h)=>{c.fillStyle='#1b5e20';c.fillRect(0,0,w,28);c.fillStyle='#4e342e';c.fillRect(12,28,8,12);});
     makeTex(this,'wall',32,32,(c,w,h)=>{c.fillStyle='#37474f';c.fillRect(0,0,w,h);dots(c,50,['#263238','#455a64']);});
     makeTex(this,'floor',32,32,(c,w,h)=>{c.fillStyle='#616161';c.fillRect(0,0,w,h);dots(c,40,['#757575','#424242']);});
-    makeTex(this,'portal',32,32,(c,w,h)=>{c.fillStyle='#6a1b9a';c.fillRect(0,0,w,h);c.fillStyle:'#ab47bc';c.fillRect(4,4,w-8,h-8);});
-    makeTex(this,'forge',36,36,(c,w,h)=>{c.fillStyle='#f57c00';c.fillRect(0,0,w,h);c.fillStyle('#ffb74d');c.fillRect(6,6,w-12,h-12);});
+    makeTex(this,'portal',32,32,(c,w,h)=>{c.fillStyle='#6a1b9a';c.fillRect(0,0,w,h);c.fillStyle='#ab47bc';c.fillRect(4,4,w-8,h-8);});
+    makeTex(this,'forge',36,36,(c,w,h)=>{c.fillStyle='#f57c00';c.fillRect(0,0,w,h);c.fillStyle = '#ffb74d';c.fillRect(6,6,w-12,h-12);}); /* <-- fixed */
     makeTex(this,'npc',28,28,(c,w,h)=>{c.fillStyle='#7e57c2';c.fillRect(0,0,w,h);});
     makeTex(this,'chest',28,20,(c,w,h)=>{c.fillStyle='#6d4c41';c.fillRect(0,0,w,h);c.fillStyle='#ffeb3b';c.fillRect(12,8,4,4);});
     makeTex(this,'door',32,32,(c,w,h)=>{c.fillStyle='#3e2723';c.fillRect(0,0,w,h);});
@@ -95,14 +95,14 @@ class Boot extends Phaser.Scene{
   create(){this.scene.start('World',{mapId:SAVE.map,spawn:SAVE.spawn});}
 }
 
-/* ===== Maps (simple, but bigger than tiny demo) ===== */
+/* ===== Maps ===== */
 const MAPS={
   overworld:{tile:32,cols:40,rows:26,
     data:(()=>{const r=26,c=40,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(0));}
       for(let x=0;x<c;x++){t[0][x]=3;t[r-1][x]=3}for(let y=0;y<r;y++){t[y][0]=3;t[y][c-1]=3}
       for(let x=4;x<36;x++)t[13][x]=1;for(let y=6;y<20;y++)t[y][8]=1;
       for(let y=3;y<9;y++)for(let x=26;x<34;x++)t[y][x]=2;
-      t[13][35]=4; t[10][35]=4; // portals east
+      t[13][35]=4; t[10][35]=4;
       return t;})(),
     portals:[{x:35,y:13,to:'dungeon',toPos:{x:96,y:96}},{x:35,y:10,to:'bossroom',toPos:{x:320,y:192}}],
     forge:{x:6*32+16,y:13*32+16}, npc:{x:10*32+16,y:13*32+16},
@@ -112,8 +112,8 @@ const MAPS={
   dungeon:{tile:32,cols:28,rows:18,
     data:(()=>{const r=18,c=28,t=[];for(let y=0;y<r;y++){t.push(new Array(c).fill(6));}
       for(let x=0;x<c;x++){t[0][x]=5;t[r-1][x]=5}for(let y=0;y<r;y++){t[y][0]=5;t[y][c-1]=5}
-      for(let x=2;x<c-2;x++)t[6][x]=5; for(let y=6;y<r-2;y++)t[y][12]=5; t[6][12]=7; // locked door
-      t[1][1]=4; // back
+      for(let x=2;x<c-2;x++)t[6][x]=5; for(let y=6;y<r-2;y++)t[y][12]=5; t[6][12]=7;
+      t[1][1]=4;
       return t;})(),
     portals:[{x:1,y:1,to:'overworld',toPos:{x:35*32+16,y:13*32+16}}],
     forge:null,npc:null,
@@ -165,8 +165,17 @@ class World extends Phaser.Scene{
     if(this.mapDef.forge) this.forge=this.physics.add.staticImage(this.mapDef.forge.x,this.mapDef.forge.y,'forge');
     if(this.mapDef.npc)   this.npc=this.physics.add.staticImage(this.mapDef.npc.x,this.mapDef.npc.y,'npc');
 
+    // Use a valid texture for invisible colliders to avoid texture errors
     this.solidBodies=this.physics.add.staticGroup();
-    for(let y=0;y<this.rows;y++){for(let x=0;x<this.cols;x++){if(solid(this.map[y][x])){const b=this.solidBodies.create(x*this.tile+this.tile/2,y*this.tile+this.tile/2,null); b.body.setSize(this.tile,this.tile); b.setVisible(false);}}}
+    for(let y=0;y<this.rows;y++){
+      for(let x=0;x<this.cols;x++){
+        if(solid(this.map[y][x])){
+          const b=this.solidBodies.create(x*this.tile+this.tile/2,y*this.tile+this.tile/2,'wall');
+          b.body.setSize(this.tile,this.tile);
+          b.setVisible(false);
+        }
+      }
+    }
     this.physics.add.collider(this.player,this.solidBodies);
     if(this.forge) this.physics.add.collider(this.player,this.forge);
     if(this.npc)   this.physics.add.collider(this.player,this.npc);
@@ -188,8 +197,16 @@ class World extends Phaser.Scene{
   }
 
   openPanel(title,text,btns){
-    this.panelTitle.textContent=title; this.panelText.textContent=text; this.panelBtns.innerHTML='';
-    (btns||[]).forEach(b=>{const el=document.createElement('button'); el.textContent=b.label; el.disabled=!!b.disabled; el.onclick=()=>{this.panel.style.display='none'; b.onClick&&b.onClick();}; this.panelBtns.appendChild(el);});
+    this.panelTitle.textContent=title;
+    this.panelText.textContent=typeof text==='string'?text:'';
+    this.panelBtns.innerHTML='';
+    (btns||[]).forEach(b=>{
+      const el=document.createElement('button');
+      el.textContent=b.label;
+      el.disabled=!!b.disabled;
+      el.onclick=()=>{this.panel.style.display='none'; b.onClick&&b.onClick();};
+      this.panelBtns.appendChild(el);
+    });
     this.panel.style.display='block';
   }
 
@@ -242,12 +259,14 @@ class World extends Phaser.Scene{
     if(this.forge && Phaser.Math.Distance.Between(this.player.x,this.player.y,this.forge.x,this.forge.y)<50){
       const canW=EQUIP.canUp('sword'),canS=EQUIP.canUp('shield'),canA=EQUIP.canUp('armor');
       const cw=EQUIP.cost('sword'), cs=EQUIP.cost('shield'), ca=EQUIP.cost('armor');
-      this.openPanel('Forge — Spend Shards',[
+      const btns=[
         {label:canW?`Upgrade Sword (${cw})`:`Sword Max/Locked`,onClick:()=>{EQUIP.up('sword');this.refreshHUD();}},
         {label:canS?`Upgrade Shield (${cs})`:`Shield Max/Locked`,onClick:()=>{EQUIP.up('shield');this.refreshHUD();}},
         {label:canA?`Upgrade Armor (${ca})`:`Armor Max/Locked`,onClick:()=>{EQUIP.up('armor');this.refreshHUD();}},
         {label:'Close'}
-      ]);return;
+      ];
+      this.openPanel('Forge — Spend Shards','Choose an upgrade.',btns); /* <-- fixed arg order */
+      return;
     }
     let opened=false;
     this.chestGroup.children.iterate(ch=>{
@@ -281,10 +300,7 @@ class World extends Phaser.Scene{
 
 ATK ${EQUIP.atk()} • DEF ${EQUIP.def()}
 Keys ${EQUIP.keys} • Shards ${EQUIP.shards}
-Hearts ${this.hearts}/${this.maxHearts} • Stamina ${Math.round(this.stamina)}`,[
-      {label:'Save',onClick:()=>{SAVE.map=this.mapId;SAVE.spawn={x:this.player.x,y:this.player.y};save();}},
-      {label:'Close'}
-    ]);
+Hearts ${this.hearts}/${this.maxHearts} • Stamina ${Math.round(this.stamina)}`,[{label:'Save',onClick:()=>{SAVE.map=this.mapId;SAVE.spawn={x:this.player.x,y:this.player.y};save();}},{label:'Close'}]);
   }
   gotoMap(id,spawn){this.scene.restart({mapId:id,spawn});}
   hit(dmg){
